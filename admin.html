@@ -226,6 +226,7 @@
     <button id="btn-group" class="other">班组互评 · 名单 / 链接 / 表格</button>
     <button id="btn-cloud" hidden>拉取提交</button>
     <button id="btn-img-all" hidden>导出全员合图</button>
+    <button id="btn-wipe" class="danger ghost" hidden>清空本页数据</button>
     <button id="btn-del" class="danger ghost" hidden>删除此人</button>
     <span class="spacer"></span>
     <span class="badge dot wait" id="badge-store">正在连接共享数据…</span>
@@ -310,7 +311,7 @@
   let noticeTimer=null;
   function notice(html,{err=false,sticky=false}={}){const n=$('notice');clearTimeout(noticeTimer);n.className='notice'+(err?' err':'');n.innerHTML=html;n.hidden=false;if(!sticky)noticeTimer=setTimeout(()=>{n.hidden=true},4500);return n}
   function toastErr(prefix,e){const msg=e&&e.message?e.message:'';const hint=/invalid_argument|not_granted|permission/i.test(msg+(e&&e.code||''))?' 你可能只有查看权限，请让页面所有者把共享方式改为“可编辑”。':'';notice(esc(prefix)+hint+(msg?' <span style="opacity:.7">('+esc(msg)+')</span>':''),{err:true,sticky:true}).appendChild(Object.assign(document.createElement('button'),{textContent:'关闭',onclick:()=>{$('notice').hidden=true}}))}
-  function askConfirm(text,onYes){const n=notice(`<span>${esc(text)}</span><button class="yes" id="nc-yes">确认删除</button><button id="nc-no">取消</button>`,{sticky:true});
+  function askConfirm(text,onYes){const n=notice(`<span>${esc(text)}</span><button class="yes" id="nc-yes">确认</button><button id="nc-no">取消</button>`,{sticky:true});
     n.querySelector('#nc-yes').onclick=()=>{n.hidden=true;onYes()};n.querySelector('#nc-no').onclick=()=>{n.hidden=true}}
 
   /* ---------- storage: shared db, or this browser only ---------- */
@@ -330,7 +331,8 @@
       async deletePerson(pid){delete data.people[pid];flush()},
       async addRating(pid,r){const id=uid();data.people[pid].ratings[id]={...r,id};flush()},
       async deleteRating(pid,rid){delete data.people[pid].ratings[rid];flush()},
-      async getRatings(pid){const p=data.people[pid];return p?Object.values(p.ratings||{}):[]}
+      async getRatings(pid){const p=data.people[pid];return p?Object.values(p.ratings||{}):[]},
+      async wipe(){data.people={};flush()}
     };
   }
   function DbStore(db){
@@ -496,7 +498,7 @@
   /* ---------- app state / routing ---------- */
   let people=[],person=null,pid=null,unPerson=null;
   const show=(list)=>{$('view-list').hidden=!list;$('view-person').hidden=list;
-    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list||(!IN_CLAUDE);$('btn-cloud').hidden=true;$('btn-img-all').hidden=!list||IN_CLAUDE;$('flow').hidden=!list||IN_CLAUDE||VIEW_ONLY;if(!$('flow').hidden)renderFlow()};
+    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list||(!IN_CLAUDE);$('btn-cloud').hidden=true;$('btn-img-all').hidden=!list||IN_CLAUDE;$('btn-wipe').hidden=!list||IN_CLAUDE||VIEW_ONLY;$('flow').hidden=!list||IN_CLAUDE||VIEW_ONLY;if(!$('flow').hidden)renderFlow()};
   function renderWho(){
     if(!person){$('who').innerHTML=`<span class="st">${people.length} 位被评估人</span>`;return}
     const st=stats(person);
@@ -770,6 +772,7 @@
   $('btn-other').addEventListener('click',()=>person&&openForm('other'));
   $('btn-print').addEventListener('click',()=>window.print());
   $('btn-img').addEventListener('click',async()=>{if(!person)return;const b=$('btn-img');b.disabled=true;b.textContent='生成中…';try{await exportPerson(person);notice('图片已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出图片'});
+  $('btn-wipe').addEventListener('click',()=>{askConfirm('清空本页所有人员与分数？Google 表格里的提交不会被删除，下次拉取仍会重新导入，需要的话请到表格里删掉对应行。',async()=>{try{if(store.wipe)await store.wipe();cloudSeen={};cloudStat={got:[],total:0,checked:0,err:''};cloudDiag=null;renderList();notice('本页数据已清空')}catch(e){toastErr('清空失败。',e)}})});
   $('btn-img-all').addEventListener('click',async()=>{const b=$('btn-img-all');b.disabled=true;b.textContent='生成中…';try{await exportAll(people);notice('合图已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全员合图'});
   if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片';$('newp-note').textContent='通常不需要手动新建，学员提交后会自动出现在这里。';}
   $('btn-group').addEventListener('click',openGroup);
