@@ -81,7 +81,7 @@
   <!-- no names in link: let the organizer paste names -->
   <section class="card setup" id="setup" hidden>
     <h3>设置互评名单</h3>
-    <p class="intro">这个链接没有带名单。请组织者在这里输入参与互评的人员姓名（每行一个），生成带名单的链接发给大家。</p>
+    <p class="intro">这个链接没有带名单。组织者一般在后台页设置名单并复制链接；也可以在这里临时输入姓名（每行一个）生成链接。</p>
     <textarea id="s-names" placeholder="张三&#10;李四&#10;王五"></textarea>
     <label style="display:block;margin-top:10px;font-size:12px;color:var(--ink-2)">Google 表格脚本网址（可选，填了学员提交会自动写进表格）<input id="s-api" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;margin-top:4px;font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:8px 10px"></label>
     <div class="actions"><span class="msg" id="s-msg"></span><button class="btn primary" id="s-go">生成互评链接</button></div>
@@ -91,7 +91,7 @@
 
   <section class="card" id="who" hidden>
     <h3>你是哪一位？</h3>
-    <p class="intro">选择你自己的名字。接下来先给自己打分，再依次给其他人打分。所有分数只保存在你的手机上，最后生成一串互评码发给组织者。</p>
+    <p class="intro" id="who-intro">选择你自己的名字。接下来先给自己打分，再依次给其他人打分，全部完成后点“提交”，分数会直接发送给组织者。</p>
     <div class="chips" id="who-chips"></div>
   </section>
 
@@ -103,12 +103,14 @@
   </section>
 
   <section class="card result" id="result" hidden>
-    <h3>互评码已生成</h3>
+    <h3 id="r-title">已提交</h3>
     <p id="r-intro">请把下面整段文字<b>原样</b>发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。</p>
     <div class="msgbox" id="r-cloud" hidden style="margin:0 0 10px"></div>
-    <div class="code" id="r-code"></div>
-    <div class="msgbox" id="r-msg"></div>
-    <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-back">返回修改</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
+    <div id="r-backup">
+      <div class="code" id="r-code"></div>
+      <div class="msgbox" id="r-msg"></div>
+    </div>
+    <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-show" hidden>显示备用互评码</button><button class="btn" id="r-back">返回修改</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
   </section>
 
   <footer>© IAOL, International Association of Organization &amp; Leadership. All rights reserved.</footer>
@@ -116,7 +118,7 @@
 
 <div class="bar" id="bar" hidden>
   <div class="prog"><span id="p-text"></span><div class="track"><i id="p-fill"></i></div></div>
-  <button class="btn primary" id="gen" disabled>生成互评码</button>
+  <button class="btn primary" id="gen" disabled>提交</button>
 </div>
 
 <script>
@@ -192,17 +194,21 @@
       const res=await fetch(api,{method:'POST',body:JSON.stringify({group:groupId(names),rater:names[me],raterIdx:me,names,blocks:vals,code,time:Date.now()})});
       const j=await res.json();
       if(!j.ok)throw new Error(j.error||'服务器拒绝');
-      st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 已提交成功，组织者的后台会自动出现你的分数。下面的互评码只是备份，不用再发。';
-    }catch(e){st.style.borderColor='#e6c9bd';st.style.color='#8A3B12';st.textContent='自动提交没有成功（'+(e&&e.message||'网络问题')+'）。请把下面整段文字发给组织者，效果一样。'}
+      $('r-title').textContent='提交成功';st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 分数已发送给组织者，你已完成。如果之后想修改，点“返回修改”重新提交即可，以最后一次为准。';
+    }catch(e){$('r-title').textContent='提交未成功';st.style.borderColor='#e6c9bd';st.style.color='#8A3B12';st.textContent='自动提交没有成功（'+(e&&e.message||'网络问题')+'）。请点“显示备用互评码”，把整段文字发给组织者，效果一样。';$('r-show').hidden=false;$('r-copy').hidden=false}
   }
   $('gen').onclick=()=>{const code=makeCode();$('r-code').textContent=code;
     $('r-msg').textContent=`【侯氏韧性评估 · 互评码】\n评分人：${names[me]}\n名单：${names.join('、')}\n互评码：${code}`;
     $('rate').hidden=true;$('bar').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'});
-    $('r-intro').textContent=api?'分数正在自动提交。如果下方显示提交成功，你就完成了。':'请把下面整段文字原样发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。';
+    $('r-title').textContent=api?'正在提交':'互评码已生成';
+    $('r-intro').textContent=api?'分数正在发送给组织者，看到“提交成功”就完成了，可以关闭页面。':'请把下面整段文字原样发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。';
+    $('r-backup').hidden=!!api;$('r-show').hidden=!api;$('r-copy').hidden=!!api;
     if(api)submitCloud(code);else $('r-cloud').hidden=true};
   $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
   $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去 Lark 粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
 
+  if(!api){$('who-intro').textContent='选择你自己的名字。接下来先给自己打分，再依次给其他人打分。全部完成后会生成一串互评码，把它发给组织者即可。';$('gen').textContent='生成互评码'}
+  $('r-show').onclick=()=>{$('r-backup').hidden=false;$('r-show').hidden=true};
   $('who').hidden=false;renderAll();
 })();
 </script>

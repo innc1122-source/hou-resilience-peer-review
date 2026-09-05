@@ -208,8 +208,8 @@
     <button id="btn-print" hidden>打印 / 导出 PDF（A3 横向）</button>
     <button id="btn-img" class="primary" hidden>导出图片</button>
     <button id="btn-link" hidden>复制此人链接</button>
-    <button id="btn-group" class="other">班组互评 · 发链接 / 导入互评码</button>
-    <button id="btn-cloud" hidden>拉取云端提交</button>
+    <button id="btn-group" class="other">班组互评 · 名单 / 链接 / 表格</button>
+    <button id="btn-cloud" hidden>拉取提交</button>
     <button id="btn-img-all" hidden>导出全员合图</button>
     <button id="btn-del" class="danger ghost" hidden>删除此人</button>
     <span class="spacer"></span>
@@ -219,7 +219,7 @@
   <!-- list view -->
   <section class="card people" id="view-list">
     <div>
-      <h2>People <span class="zh">被评估人</span><span class="note">点开一位查看对照图；他评人可以从这里进入为其打分</span></h2>
+      <h2>People <span class="zh">被评估人</span><span class="note" id="people-note">点开一位查看对照图</span></h2>
       <div class="grid" id="plist"></div>
       <div class="empty" id="pempty" hidden>还没有被评估人。在下方输入姓名新建第一位。</div>
     </div>
@@ -227,7 +227,7 @@
       <input id="np-name" placeholder="姓名 / 岗位" maxlength="40">
       <input id="np-org" placeholder="企业 · 团队（可选）" maxlength="60">
       <button class="primary" id="np-add">＋ 新建被评估人</button>
-      <span class="note" style="color:var(--ink-3);font-size:11.5px">组织内的人可直接在这里打分；组织外的班组请用「班组互评」按钮发链接、收互评码后一键导入。</span>
+      <span class="note" id="newp-note" style="color:var(--ink-3);font-size:11.5px">通常不需要手动新建：在「班组互评」里填好名单并发出链接，学员提交后会自动出现在这里。</span>
     </div>
   </section>
 
@@ -238,7 +238,7 @@
       <div class="legend">
         <span class="key"><svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="42" y2="8" stroke="#1F232B" stroke-width="2.2"/><circle cx="22" cy="8" r="4.5" fill="#1F232B" stroke="#fff" stroke-width="1.5"/></svg>自评 Self-rating</span>
         <span class="key"><svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="42" y2="8" stroke="#0F5F73" stroke-width="2" stroke-dasharray="5 3.5"/><circle cx="22" cy="8" r="5.5" fill="#fff" stroke="#0F5F73" stroke-width="1.6"/><path d="M19 5l6 6M25 5l-6 6" stroke="#0F5F73" stroke-width="1.6"/></svg>他评 Others' rating<span id="legend-n"></span></span>
-        <span class="hint">纸面填写时：自评用 ● 实线连接，他评用 ✕ 虚线连接；多位他评人取平均分。</span>
+        <span class="hint">他评为所有评分人的平均分。</span>
       </div>
     </section>
 
@@ -260,7 +260,7 @@
         <div class="insights" id="insights"></div>
       </div>
       <div class="no-print">
-        <h2>Raters <span class="zh">他评记录</span><span class="note" id="raters-note"></span></h2>
+        <h2>Raters <span class="zh">评分人</span><span class="note" id="raters-note"></span></h2>
         <div class="raters" id="raters"></div>
       </div>
     </aside>
@@ -472,7 +472,7 @@
     el.innerHTML=out.slice(0,7).map(o=>`<div class="ins ${o.cls}"><span class="tag">${o.tag}</span><div class="body"><b><span class="n">${o.it.n} · ${o.it.dim.zh} · </span>${o.it.zh}</b>　${o.txt}</div></div>`).join('');
   }
   function buildRaters(st){
-    $('raters-note').textContent=st.n?`共 ${st.n} 份`:'尚无他评';
+    $('raters-note').textContent=st.n?`共 ${st.n} 人已为其打分`:'还没有人为其打分';
     const rs=st.ratings.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
     $('raters').innerHTML=rs.map(r=>`<div class="rrow"><span class="rn">${esc(r.rater)||'未署名'}</span><span class="rr">${esc(r.relation||'')}</span><span class="rm">${fmt(mean(r.scores))}</span><span class="rt">${r.createdAt?new Date(r.createdAt).toLocaleDateString('zh-CN'):''}</span><button class="ghost" data-delr="${esc(r.id)}" title="删除这份他评">删除</button></div>`).join('');
   }
@@ -480,7 +480,7 @@
   /* ---------- app state / routing ---------- */
   let people=[],person=null,pid=null,unPerson=null;
   const show=(list)=>{$('view-list').hidden=!list;$('view-person').hidden=list;
-    ['btn-back','btn-self','btn-other','btn-link','btn-del'].forEach(id=>$(id).hidden=list);$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list;$('btn-cloud').hidden=!list||IN_CLAUDE||!apiUrl();$('btn-img-all').hidden=!list||IN_CLAUDE};
+    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list;$('btn-cloud').hidden=!list||IN_CLAUDE||!apiUrl();$('btn-img-all').hidden=!list||IN_CLAUDE};
   function renderWho(){
     if(!person){$('who').innerHTML=`<span class="st">${people.length} 位被评估人</span>`;return}
     const st=stats(person);
@@ -495,7 +495,7 @@
   function renderPerson(){
     if(!person){show(true);renderWho();return}
     const st=stats(person);buildTable(st);drawPlot(st);buildInsights(st);buildRaters(st);renderWho();
-    $('btn-self').textContent=st.selfAll===null?'填写自评':'修改自评';
+    $('btn-self').textContent=IN_CLAUDE?(st.selfAll===null?'填写自评':'修改自评'):(st.selfAll===null?'手动录入自评':'手动修改自评');$('btn-other').textContent=IN_CLAUDE?'我来填一份他评':'手动录入他评';
   }
   function openPerson(id){
     if(unPerson){unPerson();unPerson=null}
@@ -593,21 +593,21 @@
         notice(`已从表格收到 ${fresh.length} 份新提交（${codes.map(c=>c.rater).join('、')}），共写入 ${r.writes} 份分数。`)}
       else if(!silent)notice(`表格里目前共 ${subs.length} 份提交，没有新的。`);
       const names=gn.length?gn:(subs[0]&&subs[0].names)||[];const got=new Set(subs.map(s=>s.names[s.raterIdx]||s.rater));
-      if(b){b.textContent=`拉取云端提交 · 已收 ${got.size}${names.length?'/'+names.length:''}`;b.title=names.filter(n=>!got.has(n)).length?'还缺：'+names.filter(n=>!got.has(n)).join('、'):'全部收齐'}
+      if(b){b.textContent=`拉取提交 · 已收 ${got.size}${names.length?'/'+names.length:''}`;b.title=names.filter(n=>!got.has(n)).length?'还缺：'+names.filter(n=>!got.has(n)).join('、'):'全部收齐'}
     }catch(e){if(!silent)toastErr('拉取失败。请检查脚本网址是否以 /exec 结尾、部署权限是否为“任何人”。',e)}
     finally{cloudBusy=false;if(b)b.disabled=false}
   }
   function openGroup(){
     const existing=people.filter(p=>!p.sample).map(p=>p.name);
     const ov=$('overlay');
-    ov.innerHTML=`<div class="form other" role="dialog" aria-modal="true"><div class="top"><div><div class="t1">班组互评</div><div class="t2">适合组织外的小组：所有人打开同一个链接，在手机上选自己的名字，给自己和其他人打分，最后把生成的互评码发给你，在这里一次导入。</div></div><button class="ghost" id="f-close" aria-label="关闭">✕</button></div>
+    ov.innerHTML=`<div class="form other" role="dialog" aria-modal="true"><div class="top"><div><div class="t1">班组互评</div><div class="t2">${IN_CLAUDE?'所有人打开同一个链接，在手机上选自己的名字，给自己和其他人打分，最后把生成的互评码发给你，在这里一次导入。':'所有人打开同一个链接，在手机上选自己的名字，给自己和其他人打分，提交后自动进入 Google 表格并汇总到这里。'}</div></div><button class="ghost" id="f-close" aria-label="关闭">✕</button></div>
       <div class="ext">
-        ${IN_CLAUDE?'':`<div class="sec"><h4>0 · Google 表格（自动收集）</h4><p>把 Apps Script 部署后得到的、以 /exec 结尾的网址粘到这里。之后学员提交会直接进表格，你点“拉取云端提交”即可出图；页面每 20 秒也会自动拉一次。</p>
+        ${IN_CLAUDE?'':`<div class="sec"><h4>1 · Google 表格</h4><p>粘入 Apps Script 部署后得到的、以 /exec 结尾的网址。学员提交会直接进表格，本页每 20 秒自动拉取，也可随时点「拉取提交」。</p>
           <div class="links"><input id="g-api" value="${esc(apiUrl())}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:260px;font:inherit;font-size:12.5px;border:1px solid #d5d6d2;border-radius:8px;padding:6px 10px"><button id="g-api-save">保存并测试</button><span class="msg" id="g-msg0" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>`}
-        <div class="sec"><h4>1 · 名单与链接</h4><p>每行一个姓名（2–9 人）。链接里带着名单${IN_CLAUDE?'':'和表格网址'}，大家打开后选自己即可。</p>
+        <div class="sec"><h4>${IN_CLAUDE?'1':'2'} · 名单与链接</h4><p>每行一个姓名（2–9 人）。链接里带着名单${IN_CLAUDE?'':'和表格网址'}，学员打开后选自己即可开始。</p>
           <textarea id="g-names" placeholder="张三\n李四\n王五">${esc((groupNames().length?groupNames():existing).join('\n'))}</textarea>
-          <div class="links"><button class="other" id="g-copy">复制互评链接</button><button id="g-create">先把这些人建到列表里</button><span class="msg" id="g-msg1" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>
-        <div class="sec"><h4>2 · 导入互评码</h4><p>把大家发来的文字<b>全部</b>粘贴进来（可以一次粘贴多段），下面会显示识别结果。重复导入同一人的互评码会覆盖旧的。</p>
+          <div class="links"><button class="other" id="g-copy">复制互评链接</button><button id="g-create">按名单先建好人员</button><span class="msg" id="g-msg1" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>
+        <div class="sec"><h4>${IN_CLAUDE?'2 · 导入互评码':'3 · 备用：手工导入互评码'}</h4><p>${IN_CLAUDE?'把大家发来的文字<b>全部</b>粘贴进来（可以一次粘贴多段），下面会显示识别结果。':'只在某位学员自动提交失败时使用：把他发来的整段文字粘贴进来即可，可一次粘多段。'}重复导入同一人的分数会覆盖旧的。</p>
           <textarea id="g-text" placeholder="【侯氏韧性评估 · 互评码】\n评分人：张三\n名单：张三、李四、王五\n互评码：G31-…"></textarea>
           <div class="parsed" id="g-parsed">等待粘贴…</div>
           <div class="factions"><span class="msg" id="g-msg2"></span><button class="other" id="g-import" disabled>导入</button></div></div>
@@ -703,6 +703,7 @@
   $('btn-print').addEventListener('click',()=>window.print());
   $('btn-img').addEventListener('click',async()=>{if(!person)return;const b=$('btn-img');b.disabled=true;b.textContent='生成中…';try{await exportPerson(person);notice('图片已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出图片'});
   $('btn-img-all').addEventListener('click',async()=>{const b=$('btn-img-all');b.disabled=true;b.textContent='生成中…';try{await exportAll(people);notice('合图已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全员合图'});
+  if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片；列表页可导出全员合图';}
   $('btn-group').addEventListener('click',openGroup);
   $('btn-cloud').addEventListener('click',()=>pullCloud());
   setInterval(()=>{if(!IN_CLAUDE&&apiUrl()&&!$('view-list').hidden&&$('overlay').hidden)pullCloud({silent:true})},20000);
