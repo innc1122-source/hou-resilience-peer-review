@@ -100,7 +100,7 @@
 
   <section class="card" id="rate" hidden>
     <div class="tabs" id="tabs"></div>
-    <div class="target"><b id="t-name"></b><span id="t-hint"></span></div>
+    <div class="target"><b id="t-name"></b><span id="t-hint"></span><button type="button" class="btn" id="t-switch" style="margin-left:auto;padding:4px 10px;font-size:12px;border-color:transparent;color:var(--ink-3)">换人</button></div>
     <div id="items"></div>
     <div class="nav"><button class="btn" id="prev">← 上一位</button><span class="msg" id="msg" style="color:#8A3B12;font-size:12.5px;align-self:center"></span><button class="btn primary" id="next">下一位 →</button></div>
   </section>
@@ -227,7 +227,8 @@
 
   let submitted=false,pendingMe=-1;
   const hasData=()=>vals.some(a=>a.some(v=>v>=1&&v<=5));
-  function switchTo(i){me=i;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('who-confirm').hidden=true;renderAll()}
+  function switchTo(i){me=i;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('who-confirm').hidden=true;$('who').hidden=true;renderAll();window.scrollTo({top:0,behavior:'smooth'})}
+  $('t-switch').onclick=()=>{$('who').hidden=false;$('who-confirm').hidden=true;pendingMe=-1;document.querySelectorAll('#who-chips .chip').forEach(x=>x.classList.toggle('on',+x.dataset.i===me));$('who').scrollIntoView({block:'start',behavior:'smooth'})};
   $('who-chips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const i=+b.dataset.i;if(i===me){renderAll();return}
     pendingMe=i;const c=$('who-confirm');c.hidden=false;
     const wipe=me>=0&&hasData()&&!submitted;
@@ -275,24 +276,24 @@
       const res=await fetch(api,{method:'POST',body:JSON.stringify({group:groupId(names),rater:names[me],raterIdx:me,names,blocks:vals,code,time:Date.now()})});
       const j=await res.json();
       if(!j.ok)throw new Error(j.error||'服务器拒绝');
-      submitted=true;$('r-title').textContent='提交成功';st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 分数已发送给组织者，你已完成。如果之后想修改，点“返回修改”重新提交即可，以最后一次为准。';
+      submitted=true;$('r-title').textContent='提交成功';st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 分数已发送给组织者，你已完成，可以关闭页面。如需修改，点“返回修改”后重新提交，组织者那边只保留你最后一次提交。';
     }catch(e){$('r-title').textContent='提交未成功';st.style.borderColor='#e6c9bd';st.style.color='#8A3B12';st.textContent='自动提交没有成功（'+(e&&e.message||'网络问题')+'）。请点“显示备用互评码”，把整段文字发给组织者，效果一样。';$('r-show').hidden=false;$('r-copy').hidden=false}
   }
   $('gen').onclick=()=>{const code=makeCode();$('r-code').textContent=code;
     $('r-msg').textContent=`【侯氏韧性评估 · 互评码】\n评分人：${names[me]}\n名单：${names.join('、')}\n互评码：${code}`;
-    $('rate').hidden=true;$('bar').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'});
+    $('rate').hidden=true;$('bar').hidden=true;$('who').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'});
     $('r-title').textContent=api?'正在提交':'互评码已生成';
     $('r-intro').textContent=api?'分数正在发送给组织者，看到“提交成功”就完成了，可以关闭页面。':'请把下面整段文字原样发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。';
     $('r-backup').hidden=!!api;$('r-show').hidden=!api;$('r-copy').hidden=!!api;
     try{drawSelf(vals[me]);$('r-wheelwrap').hidden=false}catch(e){$('r-wheelwrap').hidden=true}
     if(api)submitCloud(code);else $('r-cloud').hidden=true};
   $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
-  $('r-next').onclick=()=>{me=-1;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('result').hidden=true;renderAll();window.scrollTo({top:0,behavior:'smooth'})};
+  $('r-next').onclick=()=>{me=-1;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('result').hidden=true;$('who').hidden=false;document.querySelectorAll('#who-chips .chip').forEach(x=>x.classList.remove('on'));renderAll();window.scrollTo({top:0,behavior:'smooth'})};
   $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去 Lark 粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
 
   if(!api){$('who-intro').textContent='选择你自己的名字。接下来先给自己打分，再依次给其他人打分。全部完成后会生成一串互评码，把它发给组织者即可。';$('gen').textContent='生成互评码'}
   $('r-show').onclick=()=>{$('r-backup').hidden=false;$('r-show').hidden=true};
-  $('who').hidden=false;renderAll();
+  $('who').hidden=me>=0;renderAll();
 })();
 </script>
 
