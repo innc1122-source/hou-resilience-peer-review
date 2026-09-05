@@ -64,6 +64,7 @@
   .ok{color:#2E6B2E;font-size:12.5px}
   .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding-top:12px;flex-wrap:wrap}
   .actions .msg{margin-right:auto;color:#8A3B12;font-size:12.5px}
+  #who-confirm.warn{border-color:#e6c9bd}#who-confirm.warn .btn.primary{background:#8A3B12;border-color:#8A3B12}
   .setup textarea{width:100%;font:inherit;font-size:14px;border:1px solid #d5d6d2;border-radius:8px;padding:8px 10px;min-height:120px;background:#fff;color:var(--ink)}
   .qr{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px}
   .qr .box{background:#fff;padding:8px;border:1px solid var(--line);border-radius:12px}
@@ -93,7 +94,7 @@
     <h3>你是哪一位？</h3>
     <p class="intro" id="who-intro">选择你自己的名字。接下来先给自己打分，再依次给其他人打分，全部完成后点“提交”，分数会直接发送给组织者。</p>
     <div class="chips" id="who-chips"></div>
-    <div class="msgbox" id="who-confirm" hidden style="border-color:#e6c9bd;color:#8A3B12;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="who-confirm-text" style="flex:1"></span><button class="btn" id="who-no">取消</button><button class="btn primary" id="who-yes" style="background:#8A3B12;border-color:#8A3B12">确定切换</button></div>
+    <div class="msgbox" id="who-confirm" hidden style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--ink)"><span id="who-confirm-text" style="flex:1"></span><button class="btn" id="who-no">选错了</button><button class="btn primary" id="who-yes">是，开始打分</button></div>
   </section>
 
   <section class="card" id="rate" hidden>
@@ -107,6 +108,7 @@
     <h3 id="r-title">已提交</h3>
     <p id="r-intro">请把下面整段文字<b>原样</b>发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。</p>
     <div class="msgbox" id="r-cloud" hidden style="margin:0 0 10px"></div>
+    <div id="r-wheelwrap" hidden><h3 style="margin-top:6px">你的自评图</h3><p>这是你刚给自己打的 18 项分数。其他人对你的评价只有组织者能看到，之后会以对照图的形式反馈给你。</p><svg id="my-wheel" viewBox="0 0 920 920" style="width:100%;height:auto;display:block;margin:4px 0 8px" role="img" aria-label="自评轮盘"></svg></div>
     <div id="r-backup">
       <div class="code" id="r-code"></div>
       <div class="msgbox" id="r-msg"></div>
@@ -125,12 +127,12 @@
 <script>
 (function(){
   const DIMS=[
-    {k:'a',en:'Authenticity',zh:'正心诚意',color:'#F0B23E',items:[[1,'Activating energy','激发活力'],[2,'Keeping faith','坚定信念'],[3,'Exploring meaning','探索意义']]},
-    {k:'b',en:'Symbiosis',zh:'互融共生',color:'#B9CF57',items:[[4,'Expanding networks','拓展网络'],[5,'Pursuing reciprocity','追求互惠'],[6,'Synergizing for coevolution','协同进化']]},
-    {k:'c',en:'Perseverance',zh:'笃行致远',color:'#C69BC8',items:[[7,'Shaping the future','塑造未来'],[8,'Confronting challenges','直面挑战'],[9,'Achieving results','达成结果']]},
-    {k:'d',en:'Planning for the Unexpected',zh:'未雨绸缪',color:'#F6C50F',items:[[10,'Anticipating change','预判变化'],[11,'Identifying risks','识别风险'],[12,'Running a stable business','稳健经营']]},
-    {k:'e',en:'Rising to the Occasion',zh:'临危不乱',color:'#3E9DB4',items:[[13,'Adapting to change','随机应变'],[14,'Uniting as one','联动协作'],[15,'Securing alliances','巩固同盟']]},
-    {k:'f',en:'Winning the Future',zh:'决胜千里',color:'#D6553B',items:[[16,'Being reflective','反思学习'],[17,'Enabling transformation','转型升级'],[18,'Seeking the new','思变求新']]}
+    {k:'a',en:'Authenticity',zh:'正心诚意',color:'#F0B23E',tint:'#FBEBCF',items:[[1,'Activating energy','激发活力'],[2,'Keeping faith','坚定信念'],[3,'Exploring meaning','探索意义']]},
+    {k:'b',en:'Symbiosis',zh:'互融共生',color:'#B9CF57',tint:'#EBF1D2',items:[[4,'Expanding networks','拓展网络'],[5,'Pursuing reciprocity','追求互惠'],[6,'Synergizing for coevolution','协同进化']]},
+    {k:'c',en:'Perseverance',zh:'笃行致远',color:'#C69BC8',tint:'#EEE1EF',items:[[7,'Shaping the future','塑造未来'],[8,'Confronting challenges','直面挑战'],[9,'Achieving results','达成结果']]},
+    {k:'d',en:'Planning for the Unexpected',zh:'未雨绸缪',color:'#F6C50F',tint:'#FBF2C9',items:[[10,'Anticipating change','预判变化'],[11,'Identifying risks','识别风险'],[12,'Running a stable business','稳健经营']]},
+    {k:'e',en:'Rising to the Occasion',zh:'临危不乱',color:'#3E9DB4',tint:'#D8EAEF',items:[[13,'Adapting to change','随机应变'],[14,'Uniting as one','联动协作'],[15,'Securing alliances','巩固同盟']]},
+    {k:'f',en:'Winning the Future',zh:'决胜千里',color:'#D6553B',tint:'#F8DCD4',items:[[16,'Being reflective','反思学习'],[17,'Enabling transformation','转型升级'],[18,'Seeking the new','思变求新']]}
   ];
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
@@ -157,14 +159,84 @@
   const filled=i=>vals[i].filter(v=>v>=1&&v<=5).length;
 
   $('who-chips').innerHTML=names.map((n,i)=>`<button class="chip" data-i="${i}">${esc(n)}</button>`).join('');
+  /* ---------- geometry (self wheel) ---------- */
+  const ITEMS=[];DIMS.forEach((d,di)=>d.items.forEach(it=>ITEMS.push({n:it[0],en:it[1],zh:it[2],dim:d,di})));
+  const CX=460,CY=460,R_HUB=58,R1=100,R5=292,R_ITEM0=304,R_ITEM1=374,R_DIM0=374,R_DIM1=446;
+  const STEP=(R5-R1)/4;
+  const rad=a=>a*Math.PI/180;
+  const pt=(r,a)=>[CX+r*Math.sin(rad(a)),CY-r*Math.cos(rad(a))];
+  const f=n=>n.toFixed(2);
+  function arc(r,a0,a1,sweep){const [x0,y0]=pt(r,a0),[x1,y1]=pt(r,a1);const large=Math.abs(a1-a0)>180?1:0;return `M${f(x0)} ${f(y0)}A${r} ${r} 0 ${large} ${sweep} ${f(x1)} ${f(y1)}`}
+  function annulus(r0,r1,a0,a1){const [ax,ay]=pt(r1,a0),[bx,by]=pt(r1,a1),[cx,cy]=pt(r0,a1),[dx,dy]=pt(r0,a0);const L=a1-a0>180?1:0;
+    return `M${f(ax)} ${f(ay)}A${r1} ${r1} 0 ${L} 1 ${f(bx)} ${f(by)}L${f(cx)} ${f(cy)}A${r0} ${r0} 0 ${L} 0 ${f(dx)} ${f(dy)}Z`}
+  const itemA0=n=>180+(n-1)*20, itemMid=n=>itemA0(n)+10;
+  const rOf=v=>R1+(v-1)*STEP;
+
+  function buildWheel(){
+    let s='';
+    s+=`<defs><filter id="hub" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity=".18"/></filter></defs>`;
+    s+=`<circle cx="${CX}" cy="${CY}" r="${R_DIM1+6}" fill="#F1F1EF"/>`;
+    DIMS.forEach((d,i)=>{
+      const a0=180+i*60,a1=a0+60,mid=a0+30;
+      s+=`<path d="${annulus(R_DIM0,R_DIM1,a0,a1)}" fill="${d.color}"/>`;
+      const rev=Math.cos(rad(mid))<-0.05;
+      // glyphs rise outward on a clockwise path and inward on a reversed one; Chinese is always the visually upper line
+      const fsZh=19,fsEn=17.5,pad=10;
+      const rZh=rev?R_DIM0+pad+fsZh:R_DIM1-pad-fsZh, rEn=rev?R_DIM1-pad:R_DIM0+pad;
+      const pEn=rev?arc(rEn,a1-2,a0+2,0):arc(rEn,a0+2,a1-2,1);
+      const pZh=rev?arc(rZh,a1-2,a0+2,0):arc(rZh,a0+2,a1-2,1);
+      s+=`<path id="pd-en-${i}" d="${pEn}" fill="none"/><path id="pd-zh-${i}" d="${pZh}" fill="none"/>`;
+      s+=`<text font-family="Jost,sans-serif" font-weight="300" font-size="${fsEn}" fill="#26292F"><textPath href="#pd-en-${i}" startOffset="50%" text-anchor="middle">${d.k}. ${esc(d.en)}</textPath></text>`;
+      s+=`<text font-family="'Noto Serif SC',serif" font-weight="600" font-size="${fsZh}" fill="#26292F" letter-spacing="6"><textPath href="#pd-zh-${i}" startOffset="50%" text-anchor="middle">${d.zh}</textPath></text>`;
+    });
+    ITEMS.forEach((it,idx)=>{
+      const a0=itemA0(it.n),a1=a0+20,mid=a0+10;const light=idx%2===0;
+      s+=`<path d="${annulus(R_ITEM0,R_ITEM1,a0,a1)}" fill="${it.dim.color}" opacity="${light?.78:.58}"/>`;
+      s+=`<path d="${annulus(R_HUB+8,R_ITEM0,a0,a1)}" fill="${it.dim.tint}" opacity="${light?.55:.85}"/>`;
+      const rev=Math.cos(rad(mid))<-0.05;
+      const fsZh=12.5,fsEn=8.6,pad=15;
+      const rZh=rev?R_ITEM0+pad+fsZh:R_ITEM1-pad-fsZh, rEn=rev?R_ITEM1-pad:R_ITEM0+pad;
+      const pZh=rev?arc(rZh,a1-1,a0+1,0):arc(rZh,a0+1,a1-1,1);
+      const pEn=rev?arc(rEn,a1-1,a0+1,0):arc(rEn,a0+1,a1-1,1);
+      s+=`<path id="pi-zh-${it.n}" d="${pZh}" fill="none"/><path id="pi-en-${it.n}" d="${pEn}" fill="none"/>`;
+      s+=`<text font-family="'Noto Sans SC',sans-serif" font-weight="500" font-size="${fsZh}" fill="#26292F" letter-spacing="1"><textPath href="#pi-zh-${it.n}" startOffset="50%" text-anchor="middle"><tspan font-family="Jost,sans-serif" font-weight="400" font-size="11">${it.n} </tspan>${it.zh}</textPath></text>`;
+      s+=`<text font-family="Jost,sans-serif" font-weight="300" font-size="${fsEn}" fill="#3A3E46"><textPath href="#pi-en-${it.n}" startOffset="50%" text-anchor="middle">${esc(it.en)}</textPath></text>`;
+    });
+    ITEMS.forEach(it=>{
+      const a=itemMid(it.n);const [x0,y0]=pt(R_HUB+8,a),[x1,y1]=pt(R5+4,a);
+      s+=`<line x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1)}" y2="${f(y1)}" stroke="${it.dim.color}" stroke-width=".8" opacity=".9"/>`;
+      for(let v=1;v<=5;v++){const [x,y]=pt(rOf(v),a);const [lx,ly]=pt(rOf(v),a-3.2);
+        s+=`<circle cx="${f(x)}" cy="${f(y)}" r="2.6" fill="#fff" stroke="${it.dim.color}" stroke-width="1"/>`;
+        s+=`<text x="${f(lx)}" y="${f(ly)}" font-family="Jost,sans-serif" font-size="8" fill="#6B7079" text-anchor="middle" dominant-baseline="middle">${v}</text>`;}
+    });
+    for(let v=1;v<=5;v++) s+=`<circle cx="${CX}" cy="${CY}" r="${rOf(v)}" fill="none" stroke="#fff" stroke-width="${v===3?1.2:.6}" opacity=".8"/>`;
+    s+=`<g id="my-plot"></g>`;
+    s+=`<g filter="url(#hub)"><circle cx="${CX}" cy="${CY}" r="${R_HUB+4}" fill="#fff"/></g>`;
+    DIMS.forEach((d,i)=>{s+=`<path d="${arc(R_HUB+2,180+i*60+3,180+i*60+57,1)}" fill="none" stroke="${d.color}" stroke-width="4"/>`});
+    s+=`<circle cx="${CX}" cy="${CY}" r="${R_HUB-3}" fill="#fff"/>`;
+    s+=`<text x="${CX}" y="${CY-6}" text-anchor="middle" font-family="Jost,sans-serif" font-size="13" letter-spacing="1" fill="#26292F">RESILIENCE</text>`;
+    s+=`<text x="${CX}" y="${CY+15}" text-anchor="middle" font-family="'Noto Serif SC',serif" font-weight="600" font-size="15" letter-spacing="2" fill="#26292F">砥砺前行</text>`;
+    $('my-wheel').innerHTML=s;
+  }
+
+  let wheelBuilt=false;
+  function drawSelf(arr){if(!wheelBuilt){buildWheel();wheelBuilt=true}
+    const pts=arr.map((v,i)=>pt(rOf(v),itemMid(i+1)));let s=`<path d="M${pts.map(p=>f(p[0])+' '+f(p[1])).join('L')}Z" fill="rgba(31,35,43,.10)" stroke="#1F232B" stroke-width="2.2" stroke-linejoin="round"/>`;
+    pts.forEach(p=>{s+=`<circle cx="${f(p[0])}" cy="${f(p[1])}" r="4.8" fill="#1F232B" stroke="#fff" stroke-width="1.6"/>`});$('my-plot').innerHTML=s}
+
   let submitted=false,pendingMe=-1;
   const hasData=()=>vals.some(a=>a.some(v=>v>=1&&v<=5));
   function switchTo(i){me=i;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('who-confirm').hidden=true;renderAll()}
   $('who-chips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const i=+b.dataset.i;if(i===me){renderAll();return}
-    if(me>=0&&hasData()&&!submitted){pendingMe=i;$('who-confirm').hidden=false;$('who-confirm-text').textContent=`切换为「${names[i]}」会清空 ${names[me]} 已填的分数，确定吗？`;return}
-    switchTo(i)};
+    pendingMe=i;const c=$('who-confirm');c.hidden=false;
+    const wipe=me>=0&&hasData()&&!submitted;
+    c.classList.toggle('warn',wipe);
+    $('who-confirm-text').innerHTML=`你是 <b style="font-size:16px">${esc(names[i])}</b> 吗？${wipe?`<br><span style="font-size:12px">确认后会清空 ${esc(names[me])} 已填的分数。</span>`:''}`;
+    $('who-yes').textContent=wipe?'是，清空并开始':'是，开始打分';
+    document.querySelectorAll('#who-chips .chip').forEach(x=>x.classList.toggle('on',+x.dataset.i===i));
+    c.scrollIntoView({block:'center',behavior:'smooth'})};
   $('who-yes').onclick=()=>{if(pendingMe>=0)switchTo(pendingMe)};
-  $('who-no').onclick=()=>{$('who-confirm').hidden=true;pendingMe=-1};
+  $('who-no').onclick=()=>{$('who-confirm').hidden=true;pendingMe=-1;document.querySelectorAll('#who-chips .chip').forEach(x=>x.classList.toggle('on',+x.dataset.i===me))};
 
   function renderAll(){
     document.querySelectorAll('#who-chips .chip').forEach(b=>b.classList.toggle('on',+b.dataset.i===me));
@@ -211,6 +283,7 @@
     $('r-title').textContent=api?'正在提交':'互评码已生成';
     $('r-intro').textContent=api?'分数正在发送给组织者，看到“提交成功”就完成了，可以关闭页面。':'请把下面整段文字原样发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。';
     $('r-backup').hidden=!!api;$('r-show').hidden=!api;$('r-copy').hidden=!!api;
+    try{drawSelf(vals[me]);$('r-wheelwrap').hidden=false}catch(e){$('r-wheelwrap').hidden=true}
     if(api)submitCloud(code);else $('r-cloud').hidden=true};
   $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
   $('r-next').onclick=()=>{me=-1;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('result').hidden=true;renderAll();window.scrollTo({top:0,behavior:'smooth'})};
