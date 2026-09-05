@@ -170,6 +170,7 @@
   .ext .parsed.ok{background:#EBF1D2;color:#2E6B2E}
   .ext .parsed.bad{background:#FBE5DF;color:#8A3B12}
   .ext .parsed b{font-family:var(--latin);letter-spacing:.04em;color:var(--ink)}
+  .view-only #btn-group,.view-only #btn-self,.view-only #btn-other,.view-only #btn-del,.view-only #btn-link,.view-only .newp input,.view-only #np-add,.view-only #raters button,.view-only #btn-cloud{display:none!important}
   footer{display:flex;justify-content:space-between;align-items:center;color:var(--ink-2);font-family:var(--latin);font-weight:300;font-size:12.5px;padding:0 6px;flex-wrap:wrap;gap:6px}
   footer .zh{font-family:var(--sans);color:var(--ink-3);font-size:11.5px}
 
@@ -497,13 +498,15 @@
     const st=stats(person);buildTable(st);drawPlot(st);buildInsights(st);buildRaters(st);renderWho();
     $('btn-self').textContent=IN_CLAUDE?(st.selfAll===null?'填写自评':'修改自评'):(st.selfAll===null?'手动录入自评':'手动修改自评');$('btn-other').textContent=IN_CLAUDE?'我来填一份他评':'手动录入他评';
   }
+  const hashParams=()=>{try{return new URLSearchParams((location.hash||'').replace(/^#/,''))}catch(e){return new URLSearchParams()}};
+  function setHash(pidOrNull){const q=hashParams();if(pidOrNull)q.set('p',pidOrNull);else q.delete('p');const s=q.toString();try{history.replaceState(null,'',s?'#'+s:location.pathname+location.search)}catch(e){}}
   function openPerson(id){
     if(unPerson){unPerson();unPerson=null}
     pid=id;person=null;show(false);
-    try{history.replaceState(null,'','#p='+id)}catch(e){}
+    setHash(id);
     unPerson=store.onPerson(id,p=>{if(!p){closePerson();return}person=p;renderPerson()});
   }
-  function closePerson(){if(unPerson){unPerson();unPerson=null}pid=null;person=null;show(true);if(store&&store.refresh)store.refresh();try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}renderList()}
+  function closePerson(){if(unPerson){unPerson();unPerson=null}pid=null;person=null;show(true);if(store&&store.refresh)store.refresh();setHash(null);renderList()}
 
   /* ---------- rating form ---------- */
   function openForm(kind){
@@ -560,6 +563,7 @@
     return {codes:out,errors};
   }
   const IN_CLAUDE=!!(window.claude&&typeof window.claude.use==='function');
+  let VIEW_ONLY=false;
   const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
   const lget=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
   const apiUrl=()=>lget('hou-api-url'), groupNames=()=>splitNames(lget('hou-group-names'));
@@ -606,7 +610,7 @@
           <div class="links"><input id="g-api" value="${esc(apiUrl())}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:260px;font:inherit;font-size:12.5px;border:1px solid #d5d6d2;border-radius:8px;padding:6px 10px"><button id="g-api-save">保存并测试</button><span class="msg" id="g-msg0" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>`}
         <div class="sec"><h4>${IN_CLAUDE?'1':'2'} · 名单与链接</h4><p>每行一个姓名（2–9 人）。链接里带着名单${IN_CLAUDE?'':'和表格网址'}，学员打开后选自己即可开始。</p>
           <textarea id="g-names" placeholder="张三\n李四\n王五">${esc((groupNames().length?groupNames():existing).join('\n'))}</textarea>
-          <div class="links"><button class="other" id="g-copy">复制互评链接</button><button id="g-create">按名单先建好人员</button><span class="msg" id="g-msg1" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>
+          <div class="links"><button class="other" id="g-copy">复制互评链接</button>${IN_CLAUDE?'':'<button id="g-share">复制结果直播链接</button>'}<button id="g-create">按名单先建好人员</button><span class="msg" id="g-msg1" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>
         <div class="sec"><h4>${IN_CLAUDE?'2 · 导入互评码':'3 · 备用：手工导入互评码'}</h4><p>${IN_CLAUDE?'把大家发来的文字<b>全部</b>粘贴进来（可以一次粘贴多段），下面会显示识别结果。':'只在某位学员自动提交失败时使用：把他发来的整段文字粘贴进来即可，可一次粘多段。'}重复导入同一人的分数会覆盖旧的。</p>
           <textarea id="g-text" placeholder="【侯氏韧性评估 · 互评码】\n评分人：张三\n名单：张三、李四、王五\n互评码：G31-…"></textarea>
           <div class="parsed" id="g-parsed">等待粘贴…</div>
@@ -632,6 +636,9 @@
         m0.textContent='正在测试…';e.target.disabled=true;
         try{const r=await fetch(v,{cache:'no-store'});const j=await r.json();if(!j.ok)throw new Error(j.error||'返回错误');m0.textContent=`连接成功，表格里目前有 ${j.count||0} 份提交`}catch(err){m0.textContent='连接失败：'+(err&&err.message||'')+'。请确认部署时“访问权限”选了“任何人”。'}
         e.target.disabled=false;return}
+      if(e.target.id==='g-share'){const list=namesNow();const m1=ov.querySelector('#g-msg1');const api=apiUrl();if(!api){m1.textContent='请先在第 1 步保存 Google 表格网址';return}if(list.length<2){m1.textContent='请先填写名单';return}
+        lset('hou-group-names',list.join('\n'));const url=location.href.split('#')[0]+'#api='+encodeURIComponent(api)+'&names='+encodeURIComponent(list.join(','))+'&view=1';
+        try{await navigator.clipboard.writeText(url);m1.textContent='结果直播链接已复制：打开的人只能看，不能改，每 20 秒自动更新'}catch(err){ta.value=url;m1.textContent='已放到下方文本框，请手动复制'}return}
       if(e.target.id==='g-create'){const list=namesNow();const m1=ov.querySelector('#g-msg1');e.target.disabled=true;let made=0;
         try{for(const n of list){if(!findPerson(n)){await store.addPerson({name:n,org:'',self:null,createdAt:Date.now()});made++}}m1.textContent=made?`已新建 ${made} 人`:'名单上的人都已在列表里'}catch(err){toastErr('新建失败。',err)}e.target.disabled=false;return}
       if(e.target.id==='g-import'&&parsed&&parsed.codes.length){e.target.disabled=true;const m2=ov.querySelector('#g-msg2');m2.style.color='';
@@ -706,20 +713,28 @@
   if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片；列表页可导出全员合图';}
   $('btn-group').addEventListener('click',openGroup);
   $('btn-cloud').addEventListener('click',()=>pullCloud());
-  setInterval(()=>{if(!IN_CLAUDE&&apiUrl()&&!$('view-list').hidden&&$('overlay').hidden)pullCloud({silent:true})},20000);
+  setInterval(()=>{if(!IN_CLAUDE&&apiUrl()&&$('overlay').hidden)pullCloud({silent:true})},20000);
   $('btn-link').addEventListener('click',async()=>{const url=location.href.split('#')[0]+'#p='+pid;try{await navigator.clipboard.writeText(url);$('btn-link').textContent='已复制 ✓';setTimeout(()=>$('btn-link').textContent='复制此人链接',1600)}catch(e){const n=notice('<span>复制这个链接发给他评人：</span>',{sticky:true});const i=document.createElement('input');i.value=url;i.readOnly=true;n.appendChild(i);i.select();n.appendChild(Object.assign(document.createElement('button'),{textContent:'关闭',onclick:()=>{n.hidden=true}}))}});
   $('btn-del').addEventListener('click',()=>{if(!person)return;askConfirm(`删除「${person.name}」及其全部自评、他评？此操作不可撤销。`,async()=>{const id=pid,nm=person.name;try{await store.deletePerson(id);closePerson();notice(esc(`已删除「${nm}」`))}catch(e){toastErr('删除失败。',e)}})});
   $('raters').addEventListener('click',e=>{const b=e.target.closest('[data-delr]');if(!b)return;askConfirm('删除这份他评？',async()=>{try{await store.deleteRating(pid,b.dataset.delr);notice('已删除这份他评')}catch(err){toastErr('删除失败。',err)}})});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('overlay').hidden)$('overlay').hidden=true});
 
   /* ---------- boot ---------- */
+  // a results link (#api=…&names=…&view=1) turns this page into a live, read-only results board
+  (function(){if(IN_CLAUDE)return;let q;try{q=new URLSearchParams((location.hash||'').replace(/^#/,''))}catch(e){return}
+    const a=(q.get('api')||'').trim();if(/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(a))lset('hou-api-url',a);
+    const n=q.get('names');if(n)lset('hou-group-names',splitNames(n).join('\n'));
+    VIEW_ONLY=q.get('view')==='1';
+    if(VIEW_ONLY){document.body.classList.add('view-only');document.querySelector('.titles .zh small').textContent='结果直播';$('newp-note').textContent='结果每 20 秒自动更新。';}
+  })();
   buildWheel();show(true);renderList();
   function start(s){
     store=s;const b=$('badge-store');
     if(s.mode==='db'){b.className='badge dot';b.textContent='共享数据 · 所有打开此页的人实时同步'}
     else{b.hidden=true}
     store.onPeople(list=>{people=list;renderList()});
-    const m=(location.hash||'').match(/#p=([A-Za-z0-9_\-.~:@+]+)/);if(m)openPerson(m[1]);
+    const q=hashParams();if(q.get('p'))openPerson(q.get('p'));
+    if(!IN_CLAUDE&&apiUrl())pullCloud({silent:true});
   }
   (async()=>{
     let db=null;
