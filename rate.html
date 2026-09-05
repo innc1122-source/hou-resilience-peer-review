@@ -174,18 +174,18 @@
     $('tabs').innerHTML=ord.map((i,k)=>`<button class="tab ${k===cur?'on':''} ${done(i)?'done':filled(i)?'part':''}" data-k="${k}"><span class="d"></span>${i===me?'我自己':esc(names[i])}</button>`).join('');
     $('rate').classList.toggle('self',t===me);
     $('t-name').textContent=t===me?names[me]+'（自评）':names[t];
-    $('t-hint').textContent=t===me?'请对自己如实打分':`由 ${names[me]} 评价`;
+    $('t-hint').textContent=(t===me?'请对自己如实打分':`由 ${names[me]} 评价`)+` · 第 ${cur+1}/${N} 位`;
     $('items').innerHTML=DIMS.map(d=>`<div class="fdim"><div class="dh"><span class="chip2" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${d.en}</span></div>`+
       d.items.map(it=>{const i=it[0]-1;return `<div class="frow" data-row="${i}"><div class="lb"><span class="no">${it[0]}</span>${it[2]}<span class="en">${it[1]}</span></div><div class="pills">${[1,2,3,4,5].map(v=>`<button type="button" class="pill ${vals[t][i]===v?'on':''}" data-i="${i}" data-v="${v}">${v}</button>`).join('')}</div></div>`}).join('')+'</div>').join('');
     $('prev').disabled=cur===0;$('next').textContent=cur===ord.length-1?'完成 ✓':'下一位 →';$('msg').textContent='';
     const total=N*18,got=vals.reduce((a,arr)=>a+arr.filter(v=>v>=1&&v<=5).length,0);const people=ord.filter(done).length;
-    $('p-text').innerHTML=`已完成 <b>${people}/${N}</b> 人 · ${got}/${total} 项`;$('p-fill').style.width=(got/total*100)+'%';$('gen').disabled=people<N;
+    $('p-text').innerHTML=`已完成 <b>${people}/${N}</b> 人 · 当前这位 ${filled(t)}/18 项`;$('p-fill').style.width=(got/total*100)+'%';$('gen').disabled=people<N;
   }
   $('tabs').onclick=e=>{const b=e.target.closest('.tab');if(b){cur=+b.dataset.k;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})}};
   $('items').onclick=e=>{const p=e.target.closest('.pill');if(!p)return;const t=order()[cur],i=+p.dataset.i,v=+p.dataset.v;vals[t][i]=v;save();
     document.querySelectorAll(`.pill[data-i="${i}"]`).forEach(b=>b.classList.toggle('on',+b.dataset.v===v));p.closest('.frow').classList.remove('miss');
     const total=N*18,got=vals.reduce((a,arr)=>a+arr.filter(x=>x>=1&&x<=5).length,0);const people=order().filter(done).length;
-    $('p-text').innerHTML=`已完成 <b>${people}/${N}</b> 人 · ${got}/${total} 项`;$('p-fill').style.width=(got/total*100)+'%';$('gen').disabled=people<N;
+    $('p-text').innerHTML=`已完成 <b>${people}/${N}</b> 人 · 当前这位 ${filled(t)}/18 项`;$('p-fill').style.width=(got/total*100)+'%';$('gen').disabled=people<N;
     const tab=$('tabs').children[cur];tab.className='tab on '+(done(t)?'done':'part');
     if(done(t)&&cur<N-1){setTimeout(()=>{cur++;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})},250)}};
   $('prev').onclick=()=>{if(cur>0){cur--;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})}};
