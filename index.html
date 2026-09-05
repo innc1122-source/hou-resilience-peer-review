@@ -85,7 +85,7 @@
     <textarea id="s-names" placeholder="张三&#10;李四&#10;王五"></textarea>
     <div class="actions"><span class="msg" id="s-msg"></span><button class="btn primary" id="s-go">生成互评链接</button></div>
     <div class="msgbox" id="s-link" hidden></div>
-    <div class="qr" id="s-qr" hidden><div class="box" id="s-qr-box"></div><p>让学员用微信「扫一扫」或相机扫码打开；也可以把上面的链接直接发到群里。</p></div>
+    <div class="qr" id="s-qr" hidden><div class="box" id="s-qr-box"></div><p>让学员用 Lark 扫一扫或相机扫码打开；也可以把上面的链接直接发到群里。</p></div>
   </section>
 
   <section class="card" id="who" hidden>
@@ -103,7 +103,7 @@
 
   <section class="card result" id="result" hidden>
     <h3>互评码已生成</h3>
-    <p>请把下面整段文字<b>原样</b>发给组织者（微信直接粘贴即可）。里面包含你给所有人的分数。</p>
+    <p>请把下面整段文字<b>原样</b>发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。</p>
     <div class="code" id="r-code"></div>
     <div class="msgbox" id="r-msg"></div>
     <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-back">返回修改</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
@@ -187,7 +187,7 @@
     $('r-msg').textContent=`【侯氏韧性评估 · 互评码】\n评分人：${names[me]}\n名单：${names.join('、')}\n互评码：${code}`;
     $('rate').hidden=true;$('bar').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'})};
   $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
-  $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去微信粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
+  $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去 Lark 粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
 
   $('who').hidden=false;renderAll();
 })();
