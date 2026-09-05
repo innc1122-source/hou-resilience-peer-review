@@ -716,7 +716,7 @@
   function start(s){
     store=s;const b=$('badge-store');
     if(s.mode==='db'){b.className='badge dot';b.textContent='共享数据 · 所有打开此页的人实时同步'}
-    else{b.className='badge dot off';b.textContent=apiUrl()?'数据保存在这台电脑的浏览器里 · 提交从 Google 表格拉取':'数据只保存在这台电脑的浏览器里 · 在「班组互评」里填入 Google 表格网址可自动收集'}
+    else{b.hidden=true}
     store.onPeople(list=>{people=list;renderList()});
     const m=(location.hash||'').match(/#p=([A-Za-z0-9_\-.~:@+]+)/);if(m)openPerson(m[1]);
   }
