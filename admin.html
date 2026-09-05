@@ -597,26 +597,36 @@
     return {raters:Object.keys(byRater).length,writes};
   }
   let cloudBusy=false,cloudSeen={},cloudStat={got:[],total:0,checked:0,err:''};
+  let cloudDiag=null;
+  const sameSet=(a,b)=>Array.isArray(a)&&Array.isArray(b)&&a.length===b.length&&a.every(x=>b.some(y=>sameName(x,y)));
+  const shapeOk=s=>Array.isArray(s.names)&&s.names.length>=2&&Array.isArray(s.blocks)&&s.blocks.length===s.names.length&&s.blocks.every(bk=>Array.isArray(bk)&&bk.length===18&&bk.every(v=>v>=1&&v<=5))&&s.raterIdx>=0&&s.raterIdx<s.names.length;
   async function pullCloud({silent=false}={}){
     const api=apiUrl();if(!api||cloudBusy)return;cloudBusy=true;
     const b=$('btn-cloud');if(b){b.disabled=true}
+    const diag={at:Date.now(),http:'',total:0,valid:0,matched:0,rows:[],others:[],err:''};
     try{
-      const gn=groupNames();const g=gn.length>=2?groupId(gn):'';
-      const res=await fetch(api+(g?'?group='+encodeURIComponent(g):''),{cache:'no-store'});const j=await res.json();
-      if(!j.ok)throw new Error(j.error||'服务器返回错误');
-      const subs=(j.submissions||[]).filter(s=>Array.isArray(s.names)&&Array.isArray(s.blocks)&&s.blocks.length===s.names.length&&s.blocks.every(bk=>Array.isArray(bk)&&bk.length===18&&bk.every(v=>v>=1&&v<=5)));
-      subs.sort((a,b)=>(+a.time||0)-(+b.time||0));
-      const fresh=subs.filter(s=>{const k=s.group+'|'+s.rater+'|'+s.time;if(cloudSeen[k])return false;cloudSeen[k]=1;return true});
-      lset('hou-cloud-last',String(Date.now()));
+      const gn=groupNames();
+      const res=await fetch(api,{cache:'no-store'});diag.http=res.status;
+      const j=await res.json();if(!j.ok)throw new Error(j.error||'服务器返回错误');
+      const all=j.submissions||[];diag.total=all.length;
+      const valid=all.filter(shapeOk);diag.valid=valid.length;
+      valid.sort((a,b)=>(+a.time||0)-(+b.time||0));
+      let names=gn;
+      if(names.length<2&&valid.length){names=valid[valid.length-1].names.slice();lset('hou-group-names',names.join('\n'))}
+      const subs=names.length>=2?valid.filter(s=>sameSet(s.names,names)):[];
+      diag.matched=subs.length;
+      const seenLists={};valid.filter(s=>!sameSet(s.names,names)).forEach(s=>{const k=s.names.map(x=>x.trim()).join('、');seenLists[k]=(seenLists[k]||0)+1});
+      diag.others=Object.entries(seenLists).map(([k,c])=>({names:k,count:c}));
+      diag.rows=all.slice(-40).reverse().map(s=>({time:+s.time||0,rater:(Array.isArray(s.names)&&s.names[s.raterIdx])||s.rater||'?',names:Array.isArray(s.names)?s.names.join('、'):String(s.names),status:!shapeOk(s)?'格式无效':(sameSet(s.names,names)?'已计入':'名单不一致')}));
+      const fresh=subs.filter(s=>{const k=s.names.join('|')+'|'+s.rater+'|'+s.time;if(cloudSeen[k])return false;cloudSeen[k]=1;return true});
       if(fresh.length){const codes=fresh.map(s=>({names:s.names,rater:s.names[s.raterIdx]||s.rater,raterIdx:+s.raterIdx,blocks:s.blocks}));const r=await importCodes(codes);
         notice(`已从表格收到 ${fresh.length} 份新提交（${codes.map(c=>c.rater).join('、')}），共写入 ${r.writes} 份分数。`)}
-      else if(!silent)notice(`表格里目前共 ${subs.length} 份提交，没有新的。`);
-      const names=gn.length?gn:(subs[0]&&subs[0].names)||[];const got=new Set(subs.map(s=>s.names[s.raterIdx]||s.rater));cloudStat={got:[...got],total:names.length,checked:Date.now(),err:''};renderFlow();
-      if(b){b.textContent=`拉取提交 · 已收 ${got.size}${names.length?'/'+names.length:''}`;b.title=names.filter(n=>!got.has(n)).length?'还缺：'+names.filter(n=>!got.has(n)).join('、'):'全部收齐'}
-    }catch(e){cloudStat.err=(e&&e.message)||'拉取失败';cloudStat.checked=Date.now();renderFlow();if(!silent)toastErr('拉取失败。请检查脚本网址是否以 /exec 结尾、部署权限是否为“任何人”。',e)}
-    finally{cloudBusy=false;if(b)b.disabled=false}
+      else if(!silent)notice(diag.total?`表格里共 ${diag.total} 份提交，其中 ${diag.matched} 份属于当前名单，没有新的。`:'表格里还没有任何提交。');
+      const got=new Set(subs.map(s=>s.names[s.raterIdx]||s.rater));cloudStat={got:[...got],total:names.length,checked:Date.now(),err:''};
+    }catch(e){diag.err=(e&&e.message)||'拉取失败';cloudStat.err=diag.err;cloudStat.checked=Date.now();if(!silent)toastErr('拉取失败。请检查脚本网址是否以 /exec 结尾、部署权限是否为“任何人”。',e)}
+    finally{cloudDiag=diag;cloudBusy=false;if(b)b.disabled=false;renderFlow()}
   }
-  let qrOpen=false;
+  let qrOpen=false,diagOpen=false;
   function renderFlow(){
     const el=$('flow');if(el.hidden)return;
     const api=apiUrl(),names=groupNames(),n=names.length,got=cloudStat.got.filter(g=>names.some(x=>sameName(x,g))).length;
@@ -627,8 +637,10 @@
       <div class="step ${api?'done':''}"><div class="k"><b>1</b>GOOGLE 表格</div><div class="v ${api?'ok':'warn'}">${api?'已连接 ✓':'未设置'}</div><div class="acts"><button data-act="setup">${api?'修改':'设置'}</button></div></div>
       <div class="step ${n>=2?'done':''}"><div class="k"><b>2</b>名单</div><div class="v ${n>=2?'ok':'warn'}">${n>=2?`${n} 人：${esc(names.join('、'))}`:'未填写'}</div><div class="acts"><button data-act="setup">${n>=2?'编辑':'填写'}</button></div></div>
       <div class="step ${link?'done':''}"><div class="k"><b>3</b>学员链接</div><div class="v">${link?'学员打开后选自己的名字开始打分':'先完成第 1、2 步'}</div><div class="acts"><button class="other" data-act="copy-link" ${link?'':'disabled'}>复制链接</button><button data-act="qr" ${link?'':'disabled'}>${qrOpen?'收起二维码':'二维码'}</button></div></div>
-      <div class="step ${n>=2&&got>=n?'done':''}"><div class="k"><b>4</b>收到提交</div><div class="v ${cloudStat.err?'warn':(n&&got>=n?'ok':'')}">${cloudStat.err?'拉取失败：'+esc(cloudStat.err):(api?`${got}${n?' / '+n:''} 人${t?' · '+t+' 更新':''}${n&&got<n&&got>0?'<br><span style="font-weight:400;color:var(--ink-3)">缺：'+esc(names.filter(x=>!cloudStat.got.some(g=>sameName(g,x))).join('、'))+'</span>':''}`:'连接表格后自动统计')}</div><div class="acts"><button data-act="pull" ${api?'':'disabled'}>立即拉取</button><button data-act="manual">手工导入</button></div></div>
+      <div class="step ${n>=2&&got>=n?'done':''}"><div class="k"><b>4</b>收到提交</div><div class="v ${cloudStat.err?'warn':(n&&got>=n?'ok':'')}">${cloudStat.err?'拉取失败：'+esc(cloudStat.err):(api?`${got}${n?' / '+n:''} 人${t?' · '+t+' 更新':''}${n&&got<n&&got>0?'<br><span style="font-weight:400;color:var(--ink-3)">缺：'+esc(names.filter(x=>!cloudStat.got.some(g=>sameName(g,x))).join('、'))+'</span>':''}`:'连接表格后自动统计')}${(cloudDiag&&!cloudDiag.err&&cloudDiag.matched===0&&cloudDiag.others.length)?`<br><span style="color:#8A3B12;font-weight:400">表格里有 ${cloudDiag.valid} 份提交，但名单与后台不一致</span>`:''}</div><div class="acts"><button data-act="pull" ${api?'':'disabled'}>立即拉取</button>${(cloudDiag&&cloudDiag.others.length)?'<button class="other" data-act="adopt">采用表格里的名单</button>':''}<button data-act="manual">手工导入</button><button class="ghost" data-act="diag">${diagOpen?'收起诊断':'诊断'}</button></div></div>
       <div class="step"><div class="k"><b>5</b>结果</div><div class="v">点开下方人员看图；或分享只读直播页</div><div class="acts"><button data-act="share" ${share?'':'disabled'}>复制直播链接</button><button data-act="export">导出全员合图</button></div></div>
+      ${diagOpen?`<div class="qrwrap" style="display:block"><b style="font-size:13px">诊断</b>${cloudDiag?`<div style="font-size:12.5px;color:var(--ink-2);margin:4px 0 8px">最近拉取 ${new Date(cloudDiag.at).toLocaleTimeString('zh-CN')} · HTTP ${esc(cloudDiag.http||'—')} · 表格总行数 ${cloudDiag.total} · 格式有效 ${cloudDiag.valid} · 属于当前名单 ${cloudDiag.matched}${cloudDiag.err?' · <span style="color:#8A3B12">错误：'+esc(cloudDiag.err)+'</span>':''}<br>后台名单：${esc(names.join('、'))||'（空）'}${cloudDiag.others.length?'<br>表格中其他名单：'+cloudDiag.others.map(o=>esc(o.names)+'（'+o.count+' 份）').join('；'):''}</div>
+        <div style="overflow:auto;max-height:220px"><table style="font-size:12px"><thead><tr><th style="text-align:left;padding:2px 8px">时间</th><th style="text-align:left;padding:2px 8px">评分人</th><th style="text-align:left;padding:2px 8px">名单</th><th style="text-align:left;padding:2px 8px">状态</th></tr></thead><tbody>${cloudDiag.rows.map(r=>`<tr><td style="padding:2px 8px;white-space:nowrap">${r.time?new Date(r.time).toLocaleString('zh-CN'):'—'}</td><td style="padding:2px 8px">${esc(r.rater)}</td><td style="padding:2px 8px;color:var(--ink-3)">${esc(r.names)}</td><td style="padding:2px 8px;color:${r.status==='已计入'?'#2E6B2E':'#8A3B12'}">${r.status}</td></tr>`).join('')||'<tr><td colspan="4" style="padding:6px 8px;color:var(--ink-3)">表格里没有任何行</td></tr>'}</tbody></table></div>`:'<div style="font-size:12.5px;color:var(--ink-3);margin-top:4px">尚未拉取过，点“立即拉取”。</div>'}</div>`:''}
       ${qrOpen&&link?`<div class="qrwrap"><div class="box" id="flow-qr"></div><p><b>学员链接二维码</b><br>投到大屏，学员用 Lark 扫一扫或相机扫码即可打开打分页。<br><span style="word-break:break-all;color:var(--ink-3)">${esc(link)}</span></p></div>`:''}`;
     if(qrOpen&&link&&window.QRCode){try{new QRCode($('flow-qr'),{text:link,width:180,height:180,correctLevel:QRCode.CorrectLevel.M})}catch(e){}}
   }
@@ -637,6 +649,8 @@
     if(act==='setup'||act==='manual'){openGroup();if(act==='manual'){const ta=document.querySelector('#g-text');ta&&ta.scrollIntoView({block:'center'});ta&&ta.focus()}return}
     if(act==='copy-link'){const url=EXT_URL+'#names='+encodeURIComponent(names.join(','))+(api?'&api='+encodeURIComponent(api):'');try{await navigator.clipboard.writeText(url);notice('学员链接已复制，发到 Lark 群即可')}catch(err){notice('无法自动复制，请点“二维码”后手动复制显示的链接',{err:true})}return}
     if(act==='qr'){qrOpen=!qrOpen;renderFlow();return}
+    if(act==='diag'){diagOpen=!diagOpen;renderFlow();if(diagOpen&&!cloudDiag)pullCloud({silent:true});return}
+    if(act==='adopt'){if(!cloudDiag||!cloudDiag.others.length)return;const pick=cloudDiag.others.slice().sort((a,b)=>b.count-a.count)[0];lset('hou-group-names',splitNames(pick.names).join('\n'));cloudSeen={};notice('已采用表格里的名单：'+pick.names);await pullCloud();return}
     if(act==='pull'){await pullCloud();return}
     if(act==='share'){const url=location.href.split('#')[0]+'#api='+encodeURIComponent(api)+'&names='+encodeURIComponent(names.join(','))+'&view=1';try{await navigator.clipboard.writeText(url);notice('结果直播链接已复制：打开的人只能看，每 20 秒自动更新')}catch(err){notice('无法自动复制',{err:true})}return}
     if(act==='export'){b.disabled=true;try{await exportAll(people);notice('合图已开始下载')}catch(err){toastErr('导出失败。',err)}b.disabled=false}
