@@ -83,6 +83,7 @@
     <h3>设置互评名单</h3>
     <p class="intro">这个链接没有带名单。请组织者在这里输入参与互评的人员姓名（每行一个），生成带名单的链接发给大家。</p>
     <textarea id="s-names" placeholder="张三&#10;李四&#10;王五"></textarea>
+    <label style="display:block;margin-top:10px;font-size:12px;color:var(--ink-2)">Google 表格脚本网址（可选，填了学员提交会自动写进表格）<input id="s-api" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;margin-top:4px;font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:8px 10px"></label>
     <div class="actions"><span class="msg" id="s-msg"></span><button class="btn primary" id="s-go">生成互评链接</button></div>
     <div class="msgbox" id="s-link" hidden></div>
     <div class="qr" id="s-qr" hidden><div class="box" id="s-qr-box"></div><p>让学员用 Lark 扫一扫或相机扫码打开；也可以把上面的链接直接发到群里。</p></div>
@@ -103,7 +104,8 @@
 
   <section class="card result" id="result" hidden>
     <h3>互评码已生成</h3>
-    <p>请把下面整段文字<b>原样</b>发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。</p>
+    <p id="r-intro">请把下面整段文字<b>原样</b>发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。</p>
+    <div class="msgbox" id="r-cloud" hidden style="margin:0 0 10px"></div>
     <div class="code" id="r-code"></div>
     <div class="msgbox" id="r-msg"></div>
     <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-back">返回修改</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
@@ -130,12 +132,13 @@
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
-  let names=[];
-  try{const h=new URLSearchParams((location.hash||'').replace(/^#/,''));const n=h.get('names');if(n)names=n.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean)}catch(e){}
+  let names=[],api='';
+  try{const h=new URLSearchParams((location.hash||'').replace(/^#/,''));const n=h.get('names');if(n)names=n.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean);api=(h.get('api')||'').trim();if(api&&!/^https:\/\/script\.google(usercontent)?\.com\//.test(api))api=''}catch(e){}
+  const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
   if(names.length<2){$('setup').hidden=false;
     $('s-go').onclick=()=>{const list=$('s-names').value.split(/[\n,，、]/).map(s=>s.trim()).filter(Boolean);
       if(list.length<2||list.length>9){$('s-msg').textContent='请填写 2–9 个姓名';return}
-      const url=location.href.split('#')[0]+'#names='+encodeURIComponent(list.join(','));$('s-link').hidden=false;$('s-link').textContent=url;$('s-msg').textContent='';
+      const a=$('s-api').value.trim();const url=location.href.split('#')[0]+'#names='+encodeURIComponent(list.join(','))+(a?'&api='+encodeURIComponent(a):'');$('s-link').hidden=false;$('s-link').textContent=url;$('s-msg').textContent='';
       if(window.QRCode){$('s-qr').hidden=false;$('s-qr-box').innerHTML='';try{new QRCode($('s-qr-box'),{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}catch(e){}}
       navigator.clipboard&&navigator.clipboard.writeText(url).then(()=>{$('s-msg').style.color='#2E6B2E';$('s-msg').textContent='链接已复制'}).catch(()=>{})};
     return}
@@ -183,9 +186,20 @@
     // G + N + raterIndex(1-based) + N blocks of 18 digits (in list order) + check digit
     const blocks=vals.map(a=>a.join(''));const all=blocks.join('');const chk=all.split('').reduce((s,c)=>s+ +c,0)%10;
     return `G${N}${me+1}-${blocks.join('-')}-${chk}`}
+  async function submitCloud(code){
+    const st=$('r-cloud');st.hidden=false;st.className='msgbox';st.textContent='正在提交到组织者的表格…';
+    try{
+      const res=await fetch(api,{method:'POST',body:JSON.stringify({group:groupId(names),rater:names[me],raterIdx:me,names,blocks:vals,code,time:Date.now()})});
+      const j=await res.json();
+      if(!j.ok)throw new Error(j.error||'服务器拒绝');
+      st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 已提交成功，组织者的后台会自动出现你的分数。下面的互评码只是备份，不用再发。';
+    }catch(e){st.style.borderColor='#e6c9bd';st.style.color='#8A3B12';st.textContent='自动提交没有成功（'+(e&&e.message||'网络问题')+'）。请把下面整段文字发给组织者，效果一样。'}
+  }
   $('gen').onclick=()=>{const code=makeCode();$('r-code').textContent=code;
     $('r-msg').textContent=`【侯氏韧性评估 · 互评码】\n评分人：${names[me]}\n名单：${names.join('、')}\n互评码：${code}`;
-    $('rate').hidden=true;$('bar').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'})};
+    $('rate').hidden=true;$('bar').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'});
+    $('r-intro').textContent=api?'分数正在自动提交。如果下方显示提交成功，你就完成了。':'请把下面整段文字原样发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。';
+    if(api)submitCloud(code);else $('r-cloud').hidden=true};
   $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
   $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去 Lark 粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
 

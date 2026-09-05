@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>侯氏韧性企业评估地图</title>
+</head>
+<body style="margin:0">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap">
+<style>
+  :root{
+    --paper:#F7F7F5; --card:#FFFFFF; --band:#E9E9E7; --ink:#1F232B; --ink-2:#4A4F58; --ink-3:#858A93;
+    --line:#DCDDD9; --self:#1F232B; --other:#0F5F73;
+    --a:#F0B23E; --b:#B9CF57; --c:#C69BC8; --d:#F6C50F; --e:#3E9DB4; --f:#D6553B;
+    --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --latin:"Jost","Avenir Next","Helvetica Neue",var(--sans);
+    --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.5}
+  body{margin:0;padding:18px 20px 28px}
+  .sheet{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  [hidden]{display:none!important}
+
+  header.band{background:var(--band);border-radius:12px;padding:12px 26px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .titles .en{font-family:var(--latin);font-weight:300;font-size:22px;letter-spacing:.01em;color:var(--ink-2);margin:0}
+  .titles .zh{font-family:var(--serif);font-weight:600;font-size:30px;letter-spacing:.14em;margin:2px 0 0;line-height:1.2}
+  .titles .zh small{font-family:var(--sans);font-weight:500;font-size:14px;letter-spacing:.3em;color:var(--ink-2);margin-left:14px;vertical-align:middle;white-space:nowrap;display:inline-block}
+  .who{text-align:right;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+  .who b{display:block;font-size:20px;font-weight:500;color:var(--ink);letter-spacing:.06em}
+  .who .st{color:var(--ink-3);font-size:11.5px}
+
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .toolbar .spacer{flex:1}
+  button{font:inherit;font-size:12.5px;border:1px solid #c9cac6;background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+  button:hover{border-color:var(--ink-2)}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--other);outline-offset:2px}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button.other{background:var(--other);color:#fff;border-color:var(--other)}
+  button.ghost{border-color:transparent;color:var(--ink-2)}
+  button.danger{color:#8A3B12;border-color:#e6c9bd}
+  .badge{font-size:11.5px;color:var(--ink-2);background:#fff;border:1px solid #c9cac6;border-radius:999px;padding:4px 10px}
+  .badge.dot::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#B9CF57;margin-right:6px;vertical-align:1px}
+  .badge.dot.off::before{background:#c9cac6}
+  .badge.dot.wait::before{background:#F6C50F}
+
+  .card{background:var(--card);border-radius:18px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 12px 30px -18px rgba(30,35,45,.25)}
+
+  /* people list */
+  .people{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px}
+  .people h2,.panel h2,.form h2{font-family:var(--latin);font-weight:400;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  h2 .zh{font-family:var(--sans);font-weight:500;letter-spacing:.12em;text-transform:none;color:var(--ink);font-size:14px}
+  h2 .note{color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:11px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .pcard{border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;background:#fff;text-align:left;display:flex;flex-direction:column;gap:6px;font:inherit}
+  .pcard:hover{border-color:var(--ink-2)}
+  .pcard .nm{font-size:16px;font-weight:500;letter-spacing:.04em}
+  .pcard .nm small{font-weight:400;color:var(--ink-3);font-size:11.5px;margin-left:8px;letter-spacing:0}
+  .pcard .org{color:var(--ink-2);font-size:12px;min-height:1.3em}
+  .pcard .stats{display:flex;gap:14px;font-family:var(--latin);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .pcard .stats b{font-weight:500;color:var(--ink);font-size:15px;margin-right:2px}
+  .pcard .stats .o b{color:var(--other)}
+  .pcard.sample{border-style:dashed}
+  .newp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
+  .newp input{font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:6px 10px;background:#fff;color:var(--ink);min-width:160px}
+  .newp input:focus{outline:none;border-color:var(--ink)}
+  .empty{color:var(--ink-3);font-size:12.5px;padding:10px 2px}
+
+  /* person view */
+  main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(460px,.85fr);gap:14px;align-items:stretch}
+  .wheel-card{padding:18px 18px 12px;display:flex;flex-direction:column;gap:6px}
+  .wheel-card svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:22px;align-items:center;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--ink-2);padding-top:2px}
+  .legend .key{display:inline-flex;align-items:center;gap:8px}
+  .legend svg{width:44px;height:16px}
+  .legend .hint{color:var(--ink-3);font-size:11.5px}
+
+  .panel{padding:18px 18px 14px;display:flex;flex-direction:column;gap:14px}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  .scores th,.scores td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+  .scores th{font-weight:500;font-size:11px;color:var(--ink-2);letter-spacing:.06em;padding-bottom:6px}
+  .scores td.item{text-align:left;white-space:nowrap}
+  .scores td.item .no{display:inline-block;width:18px;color:var(--ink-3);font-family:var(--latin)}
+  .scores td.item .en{display:block;font-family:var(--latin);font-weight:300;font-size:10px;color:var(--ink-3);margin-left:18px;line-height:1.1}
+  .scores tr.dim td{padding:7px 4px 3px;text-align:left;border-bottom:0;font-weight:500;font-size:12.5px}
+  .scores tr.dim td .chip{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;vertical-align:-1px}
+  .scores tr.dim td .en{font-family:var(--latin);font-weight:300;color:var(--ink-3);margin-left:8px;font-size:11.5px}
+  .scores tr.dim td .avg{float:right;font-weight:400;color:var(--ink-2);font-size:11.5px}
+  .scores tr.dim td .avg b{color:var(--ink);font-weight:500}
+  .scores tr.dim td .avg i{font-style:normal;color:var(--other)}
+  .scores td.self{font-weight:500}
+  .scores td.mean{color:var(--other);font-weight:500}
+  .scores td.range{color:var(--ink-3);font-size:11px}
+  .scores td.gap{font-weight:500}
+  .scores td.gap.pos{color:#8A3B12}
+  .scores td.gap.neg{color:#2E6B2E}
+  .scores tfoot td{border-bottom:0;padding-top:8px;font-weight:500}
+  .scores tfoot td.mean{color:var(--other)}
+  .scores td.blank{color:var(--ink-3);font-weight:400}
+
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tile{border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+  .tile .k{font-size:11px;color:var(--ink-3);letter-spacing:.1em}
+  .tile .v{font-family:var(--latin);font-weight:400;font-size:24px;line-height:1.15;margin-top:2px}
+  .tile .v small{font-size:12px;color:var(--ink-3);margin-left:3px}
+  .tile.other .v{color:var(--other)}
+
+  .insights{display:flex;flex-direction:column;gap:6px;font-size:12px}
+  .ins{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:7px 10px;border-radius:10px;border:1px solid var(--line)}
+  .ins .tag{font-size:11px;font-weight:500;letter-spacing:.06em;padding:1px 8px;border-radius:999px;white-space:nowrap;margin-top:1px}
+  .ins.blind .tag{background:#FBE5DF;color:#8A3B12}
+  .ins.hidden .tag{background:#E0EFF3;color:#0F5F73}
+  .ins.strong .tag{background:#F1F5DF;color:#2E6B2E}
+  .ins.weak .tag{background:#F3E8F4;color:#6A3B7D}
+  .ins .body b{font-weight:500}
+  .ins .body span.n{color:var(--ink-3)}
+  .ins-empty{color:var(--ink-3);font-size:12px}
+
+  .raters{display:flex;flex-direction:column;gap:4px;font-size:12px}
+  .rrow{display:flex;gap:10px;align-items:center;padding:5px 8px;border-radius:8px;border:1px solid var(--line)}
+  .rrow .rn{font-weight:500;min-width:80px}
+  .rrow .rr{color:var(--ink-3)}
+  .rrow .rt{color:var(--ink-3);font-family:var(--latin);font-size:11px;margin-left:auto}
+  .rrow .rm{font-family:var(--latin);color:var(--other);font-weight:500}
+  .rrow button{padding:1px 8px;font-size:11px}
+
+  /* rating form */
+  .overlay{position:fixed;inset:0;background:rgba(31,35,43,.45);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto;z-index:10}
+  .form{background:#fff;border-radius:18px;width:min(760px,100%);padding:22px 26px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
+  .form .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .form .top .t1{font-size:18px;font-weight:500;letter-spacing:.06em}
+  .form .top .t1 span{color:var(--ink-3);font-weight:400;font-size:13px;margin-left:8px}
+  .form .top .t2{color:var(--ink-2);font-size:12.5px;margin-top:2px}
+  .fmeta{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fmeta label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-2);letter-spacing:.06em}
+  .fmeta input,.fmeta select{font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:6px 10px;background:#fff;color:var(--ink)}
+  .fmeta input:focus,.fmeta select:focus{outline:none;border-color:var(--ink)}
+  .scale{display:flex;gap:16px;justify-content:flex-end;font-size:11px;color:var(--ink-3);padding-right:4px}
+  .fdim{display:flex;flex-direction:column;gap:2px}
+  .fdim .dh{display:flex;align-items:center;gap:8px;padding:10px 0 4px;font-weight:500;font-size:13px}
+  .fdim .dh .chip{width:12px;height:12px;border-radius:3px}
+  .fdim .dh .en{font-family:var(--latin);font-weight:300;color:var(--ink-3);font-size:12px}
+  .frow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}
+  .frow .lb .no{color:var(--ink-3);font-family:var(--latin);margin-right:6px}
+  .frow .lb .en{color:var(--ink-3);font-family:var(--latin);font-weight:300;font-size:11px;margin-left:6px}
+  .pills{display:flex;gap:6px}
+  .pill{width:38px;height:32px;border-radius:8px;border:1px solid #d5d6d2;background:#fff;font-family:var(--latin);font-size:14px;color:var(--ink-2);cursor:pointer;padding:0}
+  .pill:hover{border-color:var(--ink-2)}
+  .pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .form.other .pill.on{background:var(--other);border-color:var(--other)}
+  .frow.miss .lb{color:#8A3B12}
+  .factions{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding-top:6px}
+  .factions .msg{margin-right:auto;color:#8A3B12;font-size:12px}
+
+  .notice{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:20;background:var(--ink);color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:12.5px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5);max-width:min(560px,92vw)}
+  .notice.err{background:#8A3B12}
+  .notice button{padding:4px 12px;font-size:12px;border-color:rgba(255,255,255,.45);background:transparent;color:#fff}
+  .notice button.yes{background:#fff;color:var(--ink);border-color:#fff}
+  .notice.err button.yes{color:#8A3B12}
+  .notice input{font:inherit;font-size:12px;border:0;border-radius:6px;padding:4px 8px;min-width:240px;color:var(--ink)}
+  .ext{display:flex;flex-direction:column;gap:10px}
+  .ext .sec{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .ext .sec h4{margin:0;font-size:13.5px;font-weight:500;letter-spacing:.06em}
+  .ext .sec p{margin:0;font-size:12.5px;color:var(--ink-2)}
+  .ext .links{display:flex;gap:8px;flex-wrap:wrap}
+  .ext textarea{font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:8px 10px;min-height:84px;resize:vertical;background:#fff;color:var(--ink)}
+  .ext textarea:focus{outline:none;border-color:var(--ink)}
+  .ext .parsed{font-size:12.5px;padding:8px 10px;border-radius:8px;background:#f1f1ef;color:var(--ink-2)}
+  .ext .parsed.ok{background:#EBF1D2;color:#2E6B2E}
+  .ext .parsed.bad{background:#FBE5DF;color:#8A3B12}
+  .ext .parsed b{font-family:var(--latin);letter-spacing:.04em;color:var(--ink)}
+  footer{display:flex;justify-content:space-between;align-items:center;color:var(--ink-2);font-family:var(--latin);font-weight:300;font-size:12.5px;padding:0 6px;flex-wrap:wrap;gap:6px}
+  footer .zh{font-family:var(--sans);color:var(--ink-3);font-size:11.5px}
+
+  @media (max-width:1000px){ main{grid-template-columns:1fr} .fmeta{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:no-preference){ .plot path,.plot circle,.plot g{transition:all .25s ease} }
+
+  @page{size:A3 landscape;margin:8mm}
+  @media print{
+    html,body{background:#fff}
+    body{padding:0}
+    .sheet{max-width:none;width:404mm;height:281mm;gap:5mm}
+    .toolbar,.badge,.no-print,.overlay,#view-list{display:none !important}
+    .card{box-shadow:none;border:1px solid #e3e3e0}
+    main{grid-template-columns:1.12fr .88fr;gap:5mm;flex:1;min-height:0}
+    .wheel-card{padding:4mm}
+    .wheel-card svg{max-height:238mm;width:auto;margin:0 auto}
+    .panel{padding:4mm 5mm;gap:3mm}
+    header.band{padding:8px 20px 6px}
+    .titles .zh{font-size:26px}
+  }
+</style>
+
+<div class="sheet">
+  <header class="band">
+    <div class="titles">
+      <p class="en">Hou's Resilient Enterprise Profile</p>
+      <p class="zh">侯氏韧性企业模型评估地图<small>自评 · 他评 对照版</small></p>
+    </div>
+    <div class="who" id="who"></div>
+  </header>
+
+  <div class="toolbar" id="toolbar">
+    <button id="btn-back" class="ghost" hidden>← 返回人员列表</button>
+    <button id="btn-self" class="primary" hidden>填写 / 修改自评</button>
+    <button id="btn-other" class="other" hidden>我来填一份他评</button>
+    <button id="btn-print" hidden>打印 / 导出 PDF（A3 横向）</button>
+    <button id="btn-link" hidden>复制此人链接</button>
+    <button id="btn-group" class="other">班组互评 · 发链接 / 导入互评码</button>
+    <button id="btn-cloud" hidden>拉取云端提交</button>
+    <button id="btn-del" class="danger ghost" hidden>删除此人</button>
+    <span class="spacer"></span>
+    <span class="badge dot wait" id="badge-store">正在连接共享数据…</span>
+  </div>
+
+  <!-- list view -->
+  <section class="card people" id="view-list">
+    <div>
+      <h2>People <span class="zh">被评估人</span><span class="note">点开一位查看对照图；他评人可以从这里进入为其打分</span></h2>
+      <div class="grid" id="plist"></div>
+      <div class="empty" id="pempty" hidden>还没有被评估人。在下方输入姓名新建第一位。</div>
+    </div>
+    <div class="newp">
+      <input id="np-name" placeholder="姓名 / 岗位" maxlength="40">
+      <input id="np-org" placeholder="企业 · 团队（可选）" maxlength="60">
+      <button class="primary" id="np-add">＋ 新建被评估人</button>
+      <span class="note" style="color:var(--ink-3);font-size:11.5px">组织内的人可直接在这里打分；组织外的班组请用「班组互评」按钮发链接、收互评码后一键导入。</span>
+    </div>
+  </section>
+
+  <!-- person view -->
+  <main id="view-person" hidden>
+    <section class="card wheel-card">
+      <svg id="wheel" viewBox="0 0 920 920" role="img" aria-label="侯氏韧性企业模型评估轮盘，叠加自评与他评曲线"></svg>
+      <div class="legend">
+        <span class="key"><svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="42" y2="8" stroke="#1F232B" stroke-width="2.2"/><circle cx="22" cy="8" r="4.5" fill="#1F232B" stroke="#fff" stroke-width="1.5"/></svg>自评 Self-rating</span>
+        <span class="key"><svg viewBox="0 0 44 16"><line x1="2" y1="8" x2="42" y2="8" stroke="#0F5F73" stroke-width="2" stroke-dasharray="5 3.5"/><circle cx="22" cy="8" r="5.5" fill="#fff" stroke="#0F5F73" stroke-width="1.6"/><path d="M19 5l6 6M25 5l-6 6" stroke="#0F5F73" stroke-width="1.6"/></svg>他评 Others' rating<span id="legend-n"></span></span>
+        <span class="hint">纸面填写时：自评用 ● 实线连接，他评用 ✕ 虚线连接；多位他评人取平均分。</span>
+      </div>
+    </section>
+
+    <aside class="card panel">
+      <div>
+        <h2>Scores <span class="zh">评分对照</span></h2>
+        <div style="overflow-x:auto"><table class="scores" id="tbl"></table></div>
+      </div>
+      <div>
+        <h2>Overall <span class="zh">总览</span></h2>
+        <div class="summary">
+          <div class="tile"><div class="k">自评均分</div><div class="v" id="t-self">–<small>/ 5</small></div></div>
+          <div class="tile other"><div class="k">他评均分</div><div class="v" id="t-other">–<small>/ 5</small></div></div>
+          <div class="tile"><div class="k">自评 − 他评</div><div class="v" id="t-gap">–</div></div>
+        </div>
+      </div>
+      <div>
+        <h2>Gap reading <span class="zh">差距解读</span><span class="note">差值 ≥ 1 分才列出</span></h2>
+        <div class="insights" id="insights"></div>
+      </div>
+      <div class="no-print">
+        <h2>Raters <span class="zh">他评记录</span><span class="note" id="raters-note"></span></h2>
+        <div class="raters" id="raters"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <span class="zh">评估地图 © IAOL；本页为在原图基础上增加自评 / 他评对照的使用版。</span>
+    <span>© IAOL, International Association of Organization &amp; Leadership. All rights reserved.</span>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay" hidden></div>
+<div class="notice" id="notice" hidden role="alert"></div>
+
+<script>
+(function(){
+  const DIMS=[
+    {k:'a',en:'Authenticity',zh:'正心诚意',color:'#F0B23E',tint:'#FBEBCF',items:[[1,'Activating energy','激发活力'],[2,'Keeping faith','坚定信念'],[3,'Exploring meaning','探索意义']]},
+    {k:'b',en:'Symbiosis',zh:'互融共生',color:'#B9CF57',tint:'#EBF1D2',items:[[4,'Expanding networks','拓展网络'],[5,'Pursuing reciprocity','追求互惠'],[6,'Synergizing for coevolution','协同进化']]},
+    {k:'c',en:'Perseverance',zh:'笃行致远',color:'#C69BC8',tint:'#EEE1EF',items:[[7,'Shaping the future','塑造未来'],[8,'Confronting challenges','直面挑战'],[9,'Achieving results','达成结果']]},
+    {k:'d',en:'Planning for the Unexpected',zh:'未雨绸缪',color:'#F6C50F',tint:'#FBF2C9',items:[[10,'Anticipating change','预判变化'],[11,'Identifying risks','识别风险'],[12,'Running a stable business','稳健经营']]},
+    {k:'e',en:'Rising to the Occasion',zh:'临危不乱',color:'#3E9DB4',tint:'#D8EAEF',items:[[13,'Adapting to change','随机应变'],[14,'Uniting as one','联动协作'],[15,'Securing alliances','巩固同盟']]},
+    {k:'f',en:'Winning the Future',zh:'决胜千里',color:'#D6553B',tint:'#F8DCD4',items:[[16,'Being reflective','反思学习'],[17,'Enabling transformation','转型升级'],[18,'Seeking the new','思变求新']]}
+  ];
+  const ITEMS=[];DIMS.forEach((d,di)=>d.items.forEach(it=>ITEMS.push({n:it[0],en:it[1],zh:it[2],dim:d,di})));
+  const RELS=['同事','上级','下属','合作伙伴 / 客户','其他'];
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const $=id=>document.getElementById(id);
+  /* in-page dialogs: native confirm/alert/prompt are blocked inside the artifact frame */
+  let noticeTimer=null;
+  function notice(html,{err=false,sticky=false}={}){const n=$('notice');clearTimeout(noticeTimer);n.className='notice'+(err?' err':'');n.innerHTML=html;n.hidden=false;if(!sticky)noticeTimer=setTimeout(()=>{n.hidden=true},4500);return n}
+  function toastErr(prefix,e){const msg=e&&e.message?e.message:'';const hint=/invalid_argument|not_granted|permission/i.test(msg+(e&&e.code||''))?' 你可能只有查看权限，请让页面所有者把共享方式改为“可编辑”。':'';notice(esc(prefix)+hint+(msg?' <span style="opacity:.7">('+esc(msg)+')</span>':''),{err:true,sticky:true}).appendChild(Object.assign(document.createElement('button'),{textContent:'关闭',onclick:()=>{$('notice').hidden=true}}))}
+  function askConfirm(text,onYes){const n=notice(`<span>${esc(text)}</span><button class="yes" id="nc-yes">确认删除</button><button id="nc-no">取消</button>`,{sticky:true});
+    n.querySelector('#nc-yes').onclick=()=>{n.hidden=true;onYes()};n.querySelector('#nc-no').onclick=()=>{n.hidden=true}}
+
+  /* ---------- storage: shared db, or this browser only ---------- */
+  const LKEY='hou-rep-people-v2';
+  function LocalStore(){
+    let data;try{data=JSON.parse(localStorage.getItem(LKEY)||'{}')}catch(e){data={}}
+    data.people=data.people||{};
+    const subs=new Set();
+    const flush=()=>{try{localStorage.setItem(LKEY,JSON.stringify(data))}catch(e){};subs.forEach(f=>f())};
+    const list=()=>Object.values(data.people).map(p=>({...p,ratings:Object.values(p.ratings||{})})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    return {
+      mode:'local',
+      onPeople(cb){const f=()=>cb(list());subs.add(f);f();return()=>subs.delete(f)},
+      onPerson(pid,cb){const f=()=>{const p=data.people[pid];cb(p?{...p,ratings:Object.values(p.ratings||{})}:null)};subs.add(f);f();return()=>subs.delete(f)},
+      async addPerson(p){const id=uid();data.people[id]={...p,id,ratings:{}};flush();return id},
+      async updatePerson(pid,patch){Object.assign(data.people[pid],patch);flush()},
+      async deletePerson(pid){delete data.people[pid];flush()},
+      async addRating(pid,r){const id=uid();data.people[pid].ratings[id]={...r,id};flush()},
+      async deleteRating(pid,rid){delete data.people[pid].ratings[rid];flush()},
+      async getRatings(pid){const p=data.people[pid];return p?Object.values(p.ratings||{}):[]}
+    };
+  }
+  function DbStore(db){
+    const people=db.collection('people');
+    return {
+      mode:'db',
+      onPeople(cb){
+        // live list of people; each person's ratings are fetched once per snapshot (and on refresh()) to stay under the subscription cap
+        let rows={};
+        const emit=()=>cb(Object.values(rows).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)));
+        const fetchRatings=id=>people.doc(id).collection('ratings').get().then(rs=>{if(rows[id]){rows[id].ratings=rs.docs.map(r=>({...r.data(),id:r.id}));emit()}}).catch(()=>{});
+        this.refresh=()=>Object.keys(rows).forEach(fetchRatings);
+        const un=people.onSnapshot(snap=>{
+          const seen=new Set();
+          snap.docs.forEach(d=>{seen.add(d.id);const prev=rows[d.id];rows[d.id]={...d.data(),id:d.id,ratings:prev?prev.ratings:[]};if(!prev)fetchRatings(d.id)});
+          Object.keys(rows).forEach(id=>{if(!seen.has(id))delete rows[id]});
+          emit();
+        },e=>console.warn('people',e));
+        return un;
+      },
+      onPerson(pid,cb){
+        let p=null,ratings=[],got=false;
+        const emit=()=>{if(got)cb(p?{...p,ratings}:null)};
+        const u1=people.doc(pid).onSnapshot(s=>{got=true;p=s.exists?{...s.data(),id:s.id}:null;emit()},e=>console.warn('person',e));
+        const u2=people.doc(pid).collection('ratings').onSnapshot(rs=>{ratings=rs.docs.map(r=>({...r.data(),id:r.id}));emit()},()=>{});
+        return()=>{u1();u2()};
+      },
+      async addPerson(p){const ref=await people.add(p);return ref.id},
+      async updatePerson(pid,patch){await people.doc(pid).update(patch)},
+      async deletePerson(pid){const rs=await people.doc(pid).collection('ratings').get();await Promise.all(rs.docs.map(r=>people.doc(pid).collection('ratings').doc(r.id).delete()));await people.doc(pid).delete()},
+      async addRating(pid,r){await people.doc(pid).collection('ratings').add(r)},
+      async deleteRating(pid,rid){await people.doc(pid).collection('ratings').doc(rid).delete()},
+      async getRatings(pid){const rs=await people.doc(pid).collection('ratings').get();return rs.docs.map(r=>({...r.data(),id:r.id}))}
+    };
+  }
+  let store=null;
+
+  /* ---------- geometry ---------- */
+  const CX=460,CY=460,R_HUB=58,R1=100,R5=292,R_ITEM0=304,R_ITEM1=374,R_DIM0=374,R_DIM1=446;
+  const STEP=(R5-R1)/4;
+  const rad=a=>a*Math.PI/180;
+  const pt=(r,a)=>[CX+r*Math.sin(rad(a)),CY-r*Math.cos(rad(a))];
+  const f=n=>n.toFixed(2);
+  function arc(r,a0,a1,sweep){const [x0,y0]=pt(r,a0),[x1,y1]=pt(r,a1);const large=Math.abs(a1-a0)>180?1:0;return `M${f(x0)} ${f(y0)}A${r} ${r} 0 ${large} ${sweep} ${f(x1)} ${f(y1)}`}
+  function annulus(r0,r1,a0,a1){const [ax,ay]=pt(r1,a0),[bx,by]=pt(r1,a1),[cx,cy]=pt(r0,a1),[dx,dy]=pt(r0,a0);const L=a1-a0>180?1:0;
+    return `M${f(ax)} ${f(ay)}A${r1} ${r1} 0 ${L} 1 ${f(bx)} ${f(by)}L${f(cx)} ${f(cy)}A${r0} ${r0} 0 ${L} 0 ${f(dx)} ${f(dy)}Z`}
+  const itemA0=n=>180+(n-1)*20, itemMid=n=>itemA0(n)+10;
+  const rOf=v=>R1+(v-1)*STEP;
+
+  function buildWheel(){
+    let s='';
+    s+=`<defs><filter id="hub" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity=".18"/></filter></defs>`;
+    s+=`<circle cx="${CX}" cy="${CY}" r="${R_DIM1+6}" fill="#F1F1EF"/>`;
+    DIMS.forEach((d,i)=>{
+      const a0=180+i*60,a1=a0+60,mid=a0+30;
+      s+=`<path d="${annulus(R_DIM0,R_DIM1,a0,a1)}" fill="${d.color}"/>`;
+      const rev=Math.cos(rad(mid))<-0.05;
+      // glyphs rise outward on a clockwise path and inward on a reversed one; Chinese is always the visually upper line
+      const fsZh=19,fsEn=17.5,pad=10;
+      const rZh=rev?R_DIM0+pad+fsZh:R_DIM1-pad-fsZh, rEn=rev?R_DIM1-pad:R_DIM0+pad;
+      const pEn=rev?arc(rEn,a1-2,a0+2,0):arc(rEn,a0+2,a1-2,1);
+      const pZh=rev?arc(rZh,a1-2,a0+2,0):arc(rZh,a0+2,a1-2,1);
+      s+=`<path id="pd-en-${i}" d="${pEn}" fill="none"/><path id="pd-zh-${i}" d="${pZh}" fill="none"/>`;
+      s+=`<text font-family="Jost,sans-serif" font-weight="300" font-size="${fsEn}" fill="#26292F"><textPath href="#pd-en-${i}" startOffset="50%" text-anchor="middle">${d.k}. ${esc(d.en)}</textPath></text>`;
+      s+=`<text font-family="'Noto Serif SC',serif" font-weight="600" font-size="${fsZh}" fill="#26292F" letter-spacing="6"><textPath href="#pd-zh-${i}" startOffset="50%" text-anchor="middle">${d.zh}</textPath></text>`;
+    });
+    ITEMS.forEach((it,idx)=>{
+      const a0=itemA0(it.n),a1=a0+20,mid=a0+10;const light=idx%2===0;
+      s+=`<path d="${annulus(R_ITEM0,R_ITEM1,a0,a1)}" fill="${it.dim.color}" opacity="${light?.78:.58}"/>`;
+      s+=`<path d="${annulus(R_HUB+8,R_ITEM0,a0,a1)}" fill="${it.dim.tint}" opacity="${light?.55:.85}"/>`;
+      const rev=Math.cos(rad(mid))<-0.05;
+      const fsZh=12.5,fsEn=8.6,pad=15;
+      const rZh=rev?R_ITEM0+pad+fsZh:R_ITEM1-pad-fsZh, rEn=rev?R_ITEM1-pad:R_ITEM0+pad;
+      const pZh=rev?arc(rZh,a1-1,a0+1,0):arc(rZh,a0+1,a1-1,1);
+      const pEn=rev?arc(rEn,a1-1,a0+1,0):arc(rEn,a0+1,a1-1,1);
+      s+=`<path id="pi-zh-${it.n}" d="${pZh}" fill="none"/><path id="pi-en-${it.n}" d="${pEn}" fill="none"/>`;
+      s+=`<text font-family="'Noto Sans SC',sans-serif" font-weight="500" font-size="${fsZh}" fill="#26292F" letter-spacing="1"><textPath href="#pi-zh-${it.n}" startOffset="50%" text-anchor="middle"><tspan font-family="Jost,sans-serif" font-weight="400" font-size="11">${it.n} </tspan>${it.zh}</textPath></text>`;
+      s+=`<text font-family="Jost,sans-serif" font-weight="300" font-size="${fsEn}" fill="#3A3E46"><textPath href="#pi-en-${it.n}" startOffset="50%" text-anchor="middle">${esc(it.en)}</textPath></text>`;
+    });
+    ITEMS.forEach(it=>{
+      const a=itemMid(it.n);const [x0,y0]=pt(R_HUB+8,a),[x1,y1]=pt(R5+4,a);
+      s+=`<line x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1)}" y2="${f(y1)}" stroke="${it.dim.color}" stroke-width=".8" opacity=".9"/>`;
+      for(let v=1;v<=5;v++){const [x,y]=pt(rOf(v),a);const [lx,ly]=pt(rOf(v),a-3.2);
+        s+=`<circle cx="${f(x)}" cy="${f(y)}" r="2.6" fill="#fff" stroke="${it.dim.color}" stroke-width="1"/>`;
+        s+=`<text x="${f(lx)}" y="${f(ly)}" font-family="Jost,sans-serif" font-size="8" fill="#6B7079" text-anchor="middle" dominant-baseline="middle">${v}</text>`;}
+    });
+    for(let v=1;v<=5;v++) s+=`<circle cx="${CX}" cy="${CY}" r="${rOf(v)}" fill="none" stroke="#fff" stroke-width="${v===3?1.2:.6}" opacity=".8"/>`;
+    s+=`<g id="plot" class="plot"></g>`;
+    s+=`<g filter="url(#hub)"><circle cx="${CX}" cy="${CY}" r="${R_HUB+4}" fill="#fff"/></g>`;
+    DIMS.forEach((d,i)=>{s+=`<path d="${arc(R_HUB+2,180+i*60+3,180+i*60+57,1)}" fill="none" stroke="${d.color}" stroke-width="4"/>`});
+    s+=`<circle cx="${CX}" cy="${CY}" r="${R_HUB-3}" fill="#fff"/>`;
+    s+=`<text x="${CX}" y="${CY-6}" text-anchor="middle" font-family="Jost,sans-serif" font-size="13" letter-spacing="1" fill="#26292F">RESILIENCE</text>`;
+    s+=`<text x="${CX}" y="${CY+15}" text-anchor="middle" font-family="'Noto Serif SC',serif" font-weight="600" font-size="15" letter-spacing="2" fill="#26292F">砥砺前行</text>`;
+    $('wheel').innerHTML=s;
+  }
+
+  /* ---------- stats ---------- */
+  const isNum=v=>typeof v==='number'&&v>=1&&v<=5;
+  const mean=arr=>{const v=arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
+  const fmt=v=>v===null?'–':(Math.round(v*10)/10).toFixed(1);
+  const fmtGap=v=>v===null?'–':(v>0?'+':'')+(Math.round(v*10)/10).toFixed(1);
+  function stats(p){
+    const self=(p.self&&p.self.length===18)?p.self:Array(18).fill(null);
+    const ratings=(p.ratings||[]).filter(r=>Array.isArray(r.scores)&&r.scores.length===18);
+    const others=ITEMS.map((_,i)=>mean(ratings.map(r=>r.scores[i]).filter(isNum)));
+    const range=ITEMS.map((_,i)=>{const v=ratings.map(r=>r.scores[i]).filter(isNum);return v.length?[Math.min(...v),Math.max(...v)]:null});
+    return {self,others,range,n:ratings.length,ratings,selfAll:mean(self.map(v=>isNum(v)?v:null)),otherAll:mean(others)};
+  }
+
+  /* ---------- person view ---------- */
+  function drawPlot(st){
+    const g=$('plot');let s='';
+    [{vals:st.self,cls:'self',col:'#1F232B',dash:'',fill:'rgba(31,35,43,.10)'},{vals:st.others,cls:'other',col:'#0F5F73',dash:'6 4',fill:'rgba(15,95,115,.07)'}].forEach(se=>{
+      const pts=se.vals.map((v,i)=>(v!==null&&v>=1&&v<=5)?pt(rOf(v),itemMid(i+1)):null);
+      const present=pts.filter(Boolean).length;if(!present)return;
+      if(present===18)s+=`<path d="M${pts.map(p=>f(p[0])+' '+f(p[1])).join('L')}Z" fill="${se.fill}" stroke="${se.col}" stroke-width="2.2" stroke-linejoin="round" ${se.dash?`stroke-dasharray="${se.dash}"`:''}/>`;
+      else{let d='';for(let i=0;i<18;i++){const p=pts[i],q=pts[(i+1)%18];if(p&&q)d+=`M${f(p[0])} ${f(p[1])}L${f(q[0])} ${f(q[1])}`}if(d)s+=`<path d="${d}" fill="none" stroke="${se.col}" stroke-width="2.2" ${se.dash?`stroke-dasharray="${se.dash}"`:''}/>`}
+      pts.forEach(p=>{if(!p)return;const [x,y]=p;
+        if(se.cls==='self')s+=`<circle cx="${f(x)}" cy="${f(y)}" r="4.8" fill="${se.col}" stroke="#fff" stroke-width="1.6"/>`;
+        else s+=`<g><circle cx="${f(x)}" cy="${f(y)}" r="5.6" fill="#fff" stroke="${se.col}" stroke-width="1.7"/><path d="M${f(x-3)} ${f(y-3)}l6 6M${f(x+3)} ${f(y-3)}l-6 6" stroke="${se.col}" stroke-width="1.7"/></g>`});
+    });
+    g.innerHTML=s;
+  }
+  function buildTable(st){
+    const multi=st.n>1;
+    let h=`<thead><tr><th style="text-align:left;padding-left:2px">维度 / 项目</th><th>自评</th><th>他评${multi?'均值':''}</th>${multi?'<th>他评区间</th>':''}<th>差值</th></tr></thead><tbody>`;
+    DIMS.forEach(d=>{
+      const idx=d.items.map(it=>it[0]-1);
+      const sm=mean(idx.map(i=>st.self[i])),om=mean(idx.map(i=>st.others[i]));
+      h+=`<tr class="dim"><td colspan="${multi?5:4}"><span class="chip" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${esc(d.en)}</span><span class="avg">自评 <b>${fmt(sm)}</b> · 他评 <i>${fmt(om)}</i></span></td></tr>`;
+      d.items.forEach(it=>{const i=it[0]-1;const sv=st.self[i],ov=st.others[i];const gap=(isNum(sv)&&ov!==null)?sv-ov:null;
+        h+=`<tr><td class="item"><span class="no">${it[0]}</span>${it[2]}<span class="en">${esc(it[1])}</span></td>`;
+        h+=`<td class="self ${isNum(sv)?'':'blank'}">${isNum(sv)?sv:'–'}</td><td class="mean ${ov===null?'blank':''}">${fmt(ov)}</td>`;
+        if(multi)h+=`<td class="range">${st.range[i]?st.range[i][0]+' – '+st.range[i][1]:'–'}</td>`;
+        h+=`<td class="gap ${gap>0?'pos':gap<0?'neg':''}">${fmtGap(gap)}</td></tr>`});
+    });
+    h+=`</tbody><tfoot><tr><td style="text-align:left;padding-left:2px">18 项平均</td><td>${fmt(st.selfAll)}</td><td class="mean">${fmt(st.otherAll)}</td>${multi?'<td></td>':''}<td>${(st.selfAll!==null&&st.otherAll!==null)?fmtGap(st.selfAll-st.otherAll):'–'}</td></tr></tfoot>`;
+    $('tbl').innerHTML=h;
+    $('t-self').innerHTML=`${fmt(st.selfAll)}<small>/ 5</small>`;
+    $('t-other').innerHTML=`${fmt(st.otherAll)}<small>/ 5 · ${st.n} 人</small>`;
+    $('t-gap').textContent=(st.selfAll!==null&&st.otherAll!==null)?fmtGap(st.selfAll-st.otherAll):'–';
+    $('legend-n').textContent=st.n?`（${st.n} 人${st.n>1?'平均':''}）`:'（尚无）';
+  }
+  function buildInsights(st){
+    const out=[];
+    ITEMS.forEach((it,i)=>{const sv=st.self[i],ov=st.others[i];if(!isNum(sv)||ov===null)return;const gap=sv-ov;
+      if(gap>=1)out.push({cls:'blind',tag:'可能的盲区',it,txt:`自评 ${sv}，他评 ${fmt(ov)}。自己看得比他人高，值得追问他人看到了什么。`,w:gap});
+      else if(gap<=-1)out.push({cls:'hidden',tag:'隐藏的优势',it,txt:`自评 ${sv}，他评 ${fmt(ov)}。他人比你更肯定这一项，可以更有意识地发挥。`,w:-gap});
+      else if(sv>=4&&ov>=4)out.push({cls:'strong',tag:'共识优势',it,txt:`自评 ${sv}，他评 ${fmt(ov)}，双方一致认可。`,w:.5});
+      else if(sv<=2&&ov<=2)out.push({cls:'weak',tag:'共识短板',it,txt:`自评 ${sv}，他评 ${fmt(ov)}，双方都认为需要加强，优先改进。`,w:.6});
+    });
+    out.sort((a,b)=>b.w-a.w);
+    const el=$('insights');
+    if(!out.length){el.innerHTML=`<div class="ins-empty">${st.selfAll===null?'本人尚未填写自评。':''}${st.n===0?'还没有他评。':''}自评与他评都有后，这里会列出分歧较大的项目（盲区 / 隐藏优势）以及双方共识的优势与短板。</div>`;return}
+    el.innerHTML=out.slice(0,7).map(o=>`<div class="ins ${o.cls}"><span class="tag">${o.tag}</span><div class="body"><b><span class="n">${o.it.n} · ${o.it.dim.zh} · </span>${o.it.zh}</b>　${o.txt}</div></div>`).join('');
+  }
+  function buildRaters(st){
+    $('raters-note').textContent=st.n?`共 ${st.n} 份`:'尚无他评';
+    const rs=st.ratings.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    $('raters').innerHTML=rs.map(r=>`<div class="rrow"><span class="rn">${esc(r.rater)||'未署名'}</span><span class="rr">${esc(r.relation||'')}</span><span class="rm">${fmt(mean(r.scores))}</span><span class="rt">${r.createdAt?new Date(r.createdAt).toLocaleDateString('zh-CN'):''}</span><button class="ghost" data-delr="${esc(r.id)}" title="删除这份他评">删除</button></div>`).join('');
+  }
+
+  /* ---------- app state / routing ---------- */
+  let people=[],person=null,pid=null,unPerson=null;
+  const show=(list)=>{$('view-list').hidden=!list;$('view-person').hidden=list;
+    ['btn-back','btn-self','btn-other','btn-print','btn-link','btn-del'].forEach(id=>$(id).hidden=list);$('btn-group').hidden=!list;$('btn-cloud').hidden=!list||IN_CLAUDE||!apiUrl()};
+  function renderWho(){
+    if(!person){$('who').innerHTML=`<span class="st">${people.length} 位被评估人</span>`;return}
+    const st=stats(person);
+    $('who').innerHTML=`<b>${esc(person.name)}${person.sample?' <span style="font-size:11px;color:var(--ink-3);letter-spacing:0">示例</span>':''}</b>${esc(person.org)||''}<div class="st">自评 ${st.selfAll===null?'未填':'已填'} · 他评 ${st.n} 份 · ${person.createdAt?new Date(person.createdAt).toLocaleDateString('zh-CN'):''}</div>`;
+  }
+  function renderList(){
+    $('pempty').hidden=people.length>0;
+    $('plist').innerHTML=people.map(p=>{const st=stats(p);
+      return `<button class="pcard ${p.sample?'sample':''}" data-open="${esc(p.id)}"><span class="nm">${esc(p.name)}${p.sample?'<small>示例</small>':''}</span><span class="org">${esc(p.org)||'&nbsp;'}</span><span class="stats"><span>自评 <b>${st.selfAll===null?'—':fmt(st.selfAll)}</b></span><span class="o">他评 <b>${st.otherAll===null?'—':fmt(st.otherAll)}</b></span><span>${st.n} 份他评</span></span></button>`}).join('');
+    renderWho();
+  }
+  function renderPerson(){
+    if(!person){show(true);renderWho();return}
+    const st=stats(person);buildTable(st);drawPlot(st);buildInsights(st);buildRaters(st);renderWho();
+    $('btn-self').textContent=st.selfAll===null?'填写自评':'修改自评';
+  }
+  function openPerson(id){
+    if(unPerson){unPerson();unPerson=null}
+    pid=id;person=null;show(false);
+    try{history.replaceState(null,'','#p='+id)}catch(e){}
+    unPerson=store.onPerson(id,p=>{if(!p){closePerson();return}person=p;renderPerson()});
+  }
+  function closePerson(){if(unPerson){unPerson();unPerson=null}pid=null;person=null;show(true);if(store&&store.refresh)store.refresh();try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}renderList()}
+
+  /* ---------- rating form ---------- */
+  function openForm(kind){
+    const st=stats(person);const isSelf=kind==='self';
+    const vals=isSelf?st.self.slice():Array(18).fill(null);
+    let h=`<div class="form ${isSelf?'':'other'}" role="dialog" aria-modal="true"><div class="top"><div><div class="t1">${isSelf?'自评':'他评'}<span>${esc(person.name)}${person.org?' · '+esc(person.org):''}</span></div><div class="t2">${isSelf?'请本人根据实际情况对 18 项逐项打分。':'请根据你的观察为这位同事打分；提交后计入他评平均值。'}</div></div><button class="ghost" id="f-close" aria-label="关闭">✕</button></div>`;
+    if(!isSelf)h+=`<div class="fmeta"><label>评分人姓名（必填）<input id="f-rater" maxlength="30" placeholder="你的姓名"></label></div>`;
+    h+=``;
+    DIMS.forEach(d=>{h+=`<div class="fdim"><div class="dh"><span class="chip" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${esc(d.en)}</span></div>`;
+      d.items.forEach(it=>{const i=it[0]-1;h+=`<div class="frow" data-row="${i}"><div class="lb"><span class="no">${it[0]}</span>${it[2]}<span class="en">${esc(it[1])}</span></div><div class="pills" role="radiogroup" aria-label="第${it[0]}项">${[1,2,3,4,5].map(v=>`<button type="button" class="pill ${vals[i]===v?'on':''}" data-i="${i}" data-v="${v}" role="radio" aria-checked="${vals[i]===v}">${v}</button>`).join('')}</div></div>`});h+='</div>'});
+    h+=`<div class="factions"><span class="msg" id="f-msg"></span><button id="f-cancel">取消</button><button class="${isSelf?'primary':'other'}" id="f-save">${isSelf?'保存自评':'提交他评'}</button></div></div>`;
+    const ov=$('overlay');ov.innerHTML=h;ov.hidden=false;
+    ov.onclick=async e=>{
+      const pill=e.target.closest('.pill');
+      if(pill){const i=+pill.dataset.i,v=+pill.dataset.v;vals[i]=v;ov.querySelectorAll(`.pill[data-i="${i}"]`).forEach(b=>{const on=+b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-checked',on)});pill.closest('.frow').classList.remove('miss');return}
+      if(e.target.id==='f-close'||e.target.id==='f-cancel'||e.target===ov){ov.hidden=true;return}
+      if(e.target.id==='f-save'){
+        if(!isSelf&&!($('f-rater').value||'').trim()){$('f-msg').textContent='请填写评分人姓名';$('f-rater').focus();return}
+        const missing=vals.map((v,i)=>isNum(v)?null:i).filter(x=>x!==null);
+        if(missing.length){missing.forEach(i=>ov.querySelector(`.frow[data-row="${i}"]`).classList.add('miss'));$('f-msg').textContent=`还有 ${missing.length} 项未打分`;ov.querySelector(`.frow[data-row="${missing[0]}"]`).scrollIntoView({block:'center',behavior:'smooth'});return}
+        e.target.disabled=true;$('f-msg').textContent='';
+        try{
+          if(isSelf)await store.updatePerson(pid,{self:vals,selfAt:Date.now()});
+          else await store.addRating(pid,{rater:($('f-rater').value||'').trim(),scores:vals,createdAt:Date.now()});
+          ov.hidden=true;
+        }catch(err){e.target.disabled=false;$('f-msg').textContent='保存失败，请稍后重试。'+(err&&err.message?(' '+err.message):'');}
+      }
+    };
+  }
+
+  /* ---------- group peer review: one public link, one code per rater ---------- */
+  const EXT_URL='https://innc1122-source.github.io/hou-resilience-peer-review/';
+  const splitNames=s=>String(s||'').split(/[\n,，、;；]+/).map(x=>x.trim()).filter(Boolean);
+  const sameName=(a,b)=>String(a||'').replace(/\s+/g,'').toLowerCase()===String(b||'').replace(/\s+/g,'').toLowerCase();
+  const findPerson=n=>people.find(x=>!x.sample&&sameName(x.name,n));
+  function parseGroup(text){
+    const t=String(text||'');const out=[];const errors=[];
+    const gl=t.match(/名单[:：]\s*([^\n]+)/);const globalNames=gl?splitNames(gl[1]):null;
+    const re=/G(\d)(\d)((?:[\s\-–—]*\d)+)/g;let m,last=0;
+    while((m=re.exec(t))){
+      const N=+m[1],r=+m[2];const digits=m[3].replace(/\D/g,'');
+      const ctx=t.slice(last,m.index);last=re.lastIndex;
+      const nl=ctx.match(/名单[:：]\s*([^\n]+)/);const names=nl?splitNames(nl[1]):globalNames;
+      const rl=ctx.match(/评分人[:：]\s*([^\n]+)/);
+      if(digits.length<N*18+1){errors.push(`第 ${out.length+1} 个互评码不完整（需要 ${N*18+1} 位数字，只有 ${digits.length} 位）`);continue}
+      const d=digits.slice(0,N*18+1);const body=d.slice(0,N*18);
+      if(body.split('').reduce((s,c)=>s+ +c,0)%10!==+d[N*18]){errors.push(`第 ${out.length+1} 个互评码校验位不匹配，可能被改动过`);continue}
+      if(!names||names.length!==N){errors.push(`第 ${out.length+1} 个互评码找不到匹配的 ${N} 人名单，请连同「名单」那一行一起粘贴`);continue}
+      if(r<1||r>N){errors.push(`第 ${out.length+1} 个互评码的评分人序号无效`);continue}
+      const blocks=[];for(let i=0;i<N;i++)blocks.push(body.slice(i*18,i*18+18).split('').map(Number));
+      if(blocks.some(b=>b.some(v=>v<1||v>5))){errors.push(`第 ${out.length+1} 个互评码含有不在 1–5 的分数`);continue}
+      out.push({names,rater:names[r-1],raterIdx:r-1,blocks,raterLine:rl?rl[1].trim():''});
+    }
+    return {codes:out,errors};
+  }
+  const IN_CLAUDE=!!(window.claude&&typeof window.claude.use==='function');
+  const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
+  const lget=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+  const apiUrl=()=>lget('hou-api-url'), groupNames=()=>splitNames(lget('hou-group-names'));
+  async function importCodes(codes,progress){
+    const names=codes[0].names;const ids={},canon={};
+    for(const n of names){let p=findPerson(n);ids[n]=p?p.id:await store.addPerson({name:n,org:'',self:null,createdAt:Date.now()});canon[n]=p?p.name:n}
+    const byRater={};codes.forEach(c=>{byRater[c.rater]=c});
+    let writes=0;
+    for(const c of Object.values(byRater)){
+      for(let t=0;t<c.names.length;t++){const target=ids[c.names[t]];const scores=c.blocks[t];
+        if(t===c.raterIdx){await store.updatePerson(target,{self:scores,selfAt:Date.now(),selfSource:'code'})}
+        else{const raterName=canon[c.rater]||c.rater;const old=await store.getRatings(target);for(const r of old.filter(r=>sameName(r.rater,raterName)))await store.deleteRating(target,r.id);await store.addRating(target,{rater:raterName,scores,createdAt:Date.now(),source:'code'})}
+        writes++;if(progress)progress(writes)}
+    }
+    if(store.refresh)store.refresh();
+    return {raters:Object.keys(byRater).length,writes};
+  }
+  let cloudBusy=false,cloudSeen={};
+  async function pullCloud({silent=false}={}){
+    const api=apiUrl();if(!api||cloudBusy)return;cloudBusy=true;
+    const b=$('btn-cloud');if(b){b.disabled=true}
+    try{
+      const gn=groupNames();const g=gn.length>=2?groupId(gn):'';
+      const res=await fetch(api+(g?'?group='+encodeURIComponent(g):''),{cache:'no-store'});const j=await res.json();
+      if(!j.ok)throw new Error(j.error||'服务器返回错误');
+      const subs=(j.submissions||[]).filter(s=>Array.isArray(s.names)&&Array.isArray(s.blocks)&&s.blocks.length===s.names.length&&s.blocks.every(bk=>Array.isArray(bk)&&bk.length===18&&bk.every(v=>v>=1&&v<=5)));
+      subs.sort((a,b)=>(+a.time||0)-(+b.time||0));
+      const fresh=subs.filter(s=>{const k=s.group+'|'+s.rater+'|'+s.time;if(cloudSeen[k])return false;cloudSeen[k]=1;return true});
+      lset('hou-cloud-last',String(Date.now()));
+      if(fresh.length){const codes=fresh.map(s=>({names:s.names,rater:s.names[s.raterIdx]||s.rater,raterIdx:+s.raterIdx,blocks:s.blocks}));const r=await importCodes(codes);
+        notice(`已从表格收到 ${fresh.length} 份新提交（${codes.map(c=>c.rater).join('、')}），共写入 ${r.writes} 份分数。`)}
+      else if(!silent)notice(`表格里目前共 ${subs.length} 份提交，没有新的。`);
+      const names=gn.length?gn:(subs[0]&&subs[0].names)||[];const got=new Set(subs.map(s=>s.names[s.raterIdx]||s.rater));
+      if(b){b.textContent=`拉取云端提交 · 已收 ${got.size}${names.length?'/'+names.length:''}`;b.title=names.filter(n=>!got.has(n)).length?'还缺：'+names.filter(n=>!got.has(n)).join('、'):'全部收齐'}
+    }catch(e){if(!silent)toastErr('拉取失败。请检查脚本网址是否以 /exec 结尾、部署权限是否为“任何人”。',e)}
+    finally{cloudBusy=false;if(b)b.disabled=false}
+  }
+  function openGroup(){
+    const existing=people.filter(p=>!p.sample).map(p=>p.name);
+    const ov=$('overlay');
+    ov.innerHTML=`<div class="form other" role="dialog" aria-modal="true"><div class="top"><div><div class="t1">班组互评</div><div class="t2">适合组织外的小组：所有人打开同一个链接，在手机上选自己的名字，给自己和其他人打分，最后把生成的互评码发给你，在这里一次导入。</div></div><button class="ghost" id="f-close" aria-label="关闭">✕</button></div>
+      <div class="ext">
+        ${IN_CLAUDE?'':`<div class="sec"><h4>0 · Google 表格（自动收集）</h4><p>把 Apps Script 部署后得到的、以 /exec 结尾的网址粘到这里。之后学员提交会直接进表格，你点“拉取云端提交”即可出图；页面每 20 秒也会自动拉一次。</p>
+          <div class="links"><input id="g-api" value="${esc(apiUrl())}" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:260px;font:inherit;font-size:12.5px;border:1px solid #d5d6d2;border-radius:8px;padding:6px 10px"><button id="g-api-save">保存并测试</button><span class="msg" id="g-msg0" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>`}
+        <div class="sec"><h4>1 · 名单与链接</h4><p>每行一个姓名（2–9 人）。链接里带着名单${IN_CLAUDE?'':'和表格网址'}，大家打开后选自己即可。</p>
+          <textarea id="g-names" placeholder="张三\n李四\n王五">${esc((groupNames().length?groupNames():existing).join('\n'))}</textarea>
+          <div class="links"><button class="other" id="g-copy">复制互评链接</button><button id="g-create">先把这些人建到列表里</button><span class="msg" id="g-msg1" style="font-size:12px;color:var(--ink-2);align-self:center"></span></div></div>
+        <div class="sec"><h4>2 · 导入互评码</h4><p>把大家发来的文字<b>全部</b>粘贴进来（可以一次粘贴多段），下面会显示识别结果。重复导入同一人的互评码会覆盖旧的。</p>
+          <textarea id="g-text" placeholder="【侯氏韧性评估 · 互评码】\n评分人：张三\n名单：张三、李四、王五\n互评码：G31-…"></textarea>
+          <div class="parsed" id="g-parsed">等待粘贴…</div>
+          <div class="factions"><span class="msg" id="g-msg2"></span><button class="other" id="g-import" disabled>导入</button></div></div>
+      </div></div>`;
+    ov.hidden=false;let parsed=null;
+    const namesNow=()=>splitNames(ov.querySelector('#g-names').value);
+    const ta=ov.querySelector('#g-text');
+    ta.addEventListener('input',()=>{parsed=parseGroup(ta.value);const el=ov.querySelector('#g-parsed');const btn=ov.querySelector('#g-import');
+      if(!parsed.codes.length){el.className='parsed'+(parsed.errors.length?' bad':'');el.textContent=parsed.errors.join('；')||'没有识别到互评码。';btn.disabled=true;return}
+      const names=parsed.codes[0].names;const seen={};parsed.codes.forEach(c=>{seen[c.rater]=(seen[c.rater]||0)+1});
+      const missing=names.filter(n=>!seen[n]);const dup=Object.keys(seen).filter(n=>seen[n]>1);
+      el.className='parsed ok';
+      el.innerHTML=`识别到 <b>${parsed.codes.length}</b> 个互评码（名单 ${names.length} 人：${esc(names.join('、'))}）。已收到：${esc(Object.keys(seen).join('、'))}。`+(missing.length?`<br>还缺：<b>${esc(missing.join('、'))}</b>（可以先导入，之后再补）。`:'<br>名单上的人都齐了 ✓')+(dup.length?`<br>重复：${esc(dup.join('、'))}，以最后一个为准。`:'')+(parsed.errors.length?`<br><span style="color:#8A3B12">${esc(parsed.errors.join('；'))}</span>`:'');
+      btn.disabled=false});
+    ov.onclick=async e=>{
+      if(e.target.id==='f-close'||e.target===ov){ov.hidden=true;return}
+      if(e.target.id==='g-copy'){const list=namesNow();const m1=ov.querySelector('#g-msg1');if(list.length<2||list.length>9){m1.textContent='请填写 2–9 个姓名';return}
+        lset('hou-group-names',list.join('\n'));const api=IN_CLAUDE?'':apiUrl();const url=EXT_URL+'#names='+encodeURIComponent(list.join(','))+(api?'&api='+encodeURIComponent(api):'');try{await navigator.clipboard.writeText(url);m1.textContent=api?'链接已复制（含表格网址），发到群里即可':'链接已复制，发到群里即可'}catch(err){ta.value=url;m1.textContent='已放到下方文本框，请手动复制'}return}
+      if(e.target.id==='g-api-save'){const v=ov.querySelector('#g-api').value.trim();const m0=ov.querySelector('#g-msg0');
+        if(v&&!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(v)){m0.textContent='网址格式不对：应以 https://script.google.com/macros/s/ 开头、/exec 结尾';return}
+        lset('hou-api-url',v);$('btn-cloud').hidden=!v;if(!v){m0.textContent='已清除';return}
+        m0.textContent='正在测试…';e.target.disabled=true;
+        try{const r=await fetch(v,{cache:'no-store'});const j=await r.json();if(!j.ok)throw new Error(j.error||'返回错误');m0.textContent=`连接成功，表格里目前有 ${j.count||0} 份提交`}catch(err){m0.textContent='连接失败：'+(err&&err.message||'')+'。请确认部署时“访问权限”选了“任何人”。'}
+        e.target.disabled=false;return}
+      if(e.target.id==='g-create'){const list=namesNow();const m1=ov.querySelector('#g-msg1');e.target.disabled=true;let made=0;
+        try{for(const n of list){if(!findPerson(n)){await store.addPerson({name:n,org:'',self:null,createdAt:Date.now()});made++}}m1.textContent=made?`已新建 ${made} 人`:'名单上的人都已在列表里'}catch(err){toastErr('新建失败。',err)}e.target.disabled=false;return}
+      if(e.target.id==='g-import'&&parsed&&parsed.codes.length){e.target.disabled=true;const m2=ov.querySelector('#g-msg2');m2.style.color='';
+        try{const r=await importCodes(parsed.codes,n=>{m2.textContent=`正在写入… ${n}`});ov.hidden=true;notice(`已导入 ${r.raters} 人的互评码，共 ${r.writes} 份分数。点开任意一人即可看图。`)}
+        catch(err){e.target.disabled=false;toastErr('导入失败。',err)}
+      }
+    };
+  }
+
+  /* ---------- events ---------- */
+  $('plist').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b)openPerson(b.dataset.open)});
+  $('np-add').addEventListener('click',async()=>{const name=$('np-name').value.trim();if(!name){$('np-name').focus();return}
+    $('np-add').disabled=true;try{const id=await store.addPerson({name,org:$('np-org').value.trim(),self:null,createdAt:Date.now()});$('np-name').value='';$('np-org').value='';openPerson(id)}catch(err){toastErr('新建失败。',err)}$('np-add').disabled=false});
+  $('np-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('np-add').click()});
+  $('btn-back').addEventListener('click',closePerson);
+  $('btn-self').addEventListener('click',()=>person&&openForm('self'));
+  $('btn-other').addEventListener('click',()=>person&&openForm('other'));
+  $('btn-print').addEventListener('click',()=>window.print());
+  $('btn-group').addEventListener('click',openGroup);
+  $('btn-cloud').addEventListener('click',()=>pullCloud());
+  setInterval(()=>{if(!IN_CLAUDE&&apiUrl()&&!$('view-list').hidden&&$('overlay').hidden)pullCloud({silent:true})},20000);
+  $('btn-link').addEventListener('click',async()=>{const url=location.href.split('#')[0]+'#p='+pid;try{await navigator.clipboard.writeText(url);$('btn-link').textContent='已复制 ✓';setTimeout(()=>$('btn-link').textContent='复制此人链接',1600)}catch(e){const n=notice('<span>复制这个链接发给他评人：</span>',{sticky:true});const i=document.createElement('input');i.value=url;i.readOnly=true;n.appendChild(i);i.select();n.appendChild(Object.assign(document.createElement('button'),{textContent:'关闭',onclick:()=>{n.hidden=true}}))}});
+  $('btn-del').addEventListener('click',()=>{if(!person)return;askConfirm(`删除「${person.name}」及其全部自评、他评？此操作不可撤销。`,async()=>{const id=pid,nm=person.name;try{await store.deletePerson(id);closePerson();notice(esc(`已删除「${nm}」`))}catch(e){toastErr('删除失败。',e)}})});
+  $('raters').addEventListener('click',e=>{const b=e.target.closest('[data-delr]');if(!b)return;askConfirm('删除这份他评？',async()=>{try{await store.deleteRating(pid,b.dataset.delr);notice('已删除这份他评')}catch(err){toastErr('删除失败。',err)}})});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('overlay').hidden)$('overlay').hidden=true});
+
+  /* ---------- boot ---------- */
+  buildWheel();show(true);renderList();
+  function start(s){
+    store=s;const b=$('badge-store');
+    if(s.mode==='db'){b.className='badge dot';b.textContent='共享数据 · 所有打开此页的人实时同步'}
+    else{b.className='badge dot off';b.textContent=apiUrl()?'数据保存在这台电脑的浏览器里 · 提交从 Google 表格拉取':'数据只保存在这台电脑的浏览器里 · 在「班组互评」里填入 Google 表格网址可自动收集'}
+    store.onPeople(list=>{people=list;renderList()});
+    const m=(location.hash||'').match(/#p=([A-Za-z0-9_\-.~:@+]+)/);if(m)openPerson(m[1]);
+  }
+  (async()=>{
+    let db=null;
+    try{if(window.claude&&typeof window.claude.use==='function')db=await window.claude.use('db')}catch(e){db=null}
+    start(db?DbStore(db):LocalStore());
+  })();
+})();
+</script>
+
+</body>
+</html>
