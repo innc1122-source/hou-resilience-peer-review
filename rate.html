@@ -93,6 +93,7 @@
     <h3>你是哪一位？</h3>
     <p class="intro" id="who-intro">选择你自己的名字。接下来先给自己打分，再依次给其他人打分，全部完成后点“提交”，分数会直接发送给组织者。</p>
     <div class="chips" id="who-chips"></div>
+    <div class="msgbox" id="who-confirm" hidden style="border-color:#e6c9bd;color:#8A3B12;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="who-confirm-text" style="flex:1"></span><button class="btn" id="who-no">取消</button><button class="btn primary" id="who-yes" style="background:#8A3B12;border-color:#8A3B12">确定切换</button></div>
   </section>
 
   <section class="card" id="rate" hidden>
@@ -110,7 +111,7 @@
       <div class="code" id="r-code"></div>
       <div class="msgbox" id="r-msg"></div>
     </div>
-    <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-show" hidden>显示备用互评码</button><button class="btn" id="r-back">返回修改</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
+    <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-show" hidden>显示备用互评码</button><button class="btn" id="r-back">返回修改</button><button class="btn" id="r-next">换一个人填写</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
   </section>
 
   <footer>© IAOL, International Association of Organization &amp; Leadership. All rights reserved.</footer>
@@ -156,7 +157,14 @@
   const filled=i=>vals[i].filter(v=>v>=1&&v<=5).length;
 
   $('who-chips').innerHTML=names.map((n,i)=>`<button class="chip" data-i="${i}">${esc(n)}</button>`).join('');
-  $('who-chips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;me=+b.dataset.i;cur=0;save();renderAll()};
+  let submitted=false,pendingMe=-1;
+  const hasData=()=>vals.some(a=>a.some(v=>v>=1&&v<=5));
+  function switchTo(i){me=i;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('who-confirm').hidden=true;renderAll()}
+  $('who-chips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const i=+b.dataset.i;if(i===me){renderAll();return}
+    if(me>=0&&hasData()&&!submitted){pendingMe=i;$('who-confirm').hidden=false;$('who-confirm-text').textContent=`切换为「${names[i]}」会清空 ${names[me]} 已填的分数，确定吗？`;return}
+    switchTo(i)};
+  $('who-yes').onclick=()=>{if(pendingMe>=0)switchTo(pendingMe)};
+  $('who-no').onclick=()=>{$('who-confirm').hidden=true;pendingMe=-1};
 
   function renderAll(){
     document.querySelectorAll('#who-chips .chip').forEach(b=>b.classList.toggle('on',+b.dataset.i===me));
@@ -194,7 +202,7 @@
       const res=await fetch(api,{method:'POST',body:JSON.stringify({group:groupId(names),rater:names[me],raterIdx:me,names,blocks:vals,code,time:Date.now()})});
       const j=await res.json();
       if(!j.ok)throw new Error(j.error||'服务器拒绝');
-      $('r-title').textContent='提交成功';st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 分数已发送给组织者，你已完成。如果之后想修改，点“返回修改”重新提交即可，以最后一次为准。';
+      submitted=true;$('r-title').textContent='提交成功';st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 分数已发送给组织者，你已完成。如果之后想修改，点“返回修改”重新提交即可，以最后一次为准。';
     }catch(e){$('r-title').textContent='提交未成功';st.style.borderColor='#e6c9bd';st.style.color='#8A3B12';st.textContent='自动提交没有成功（'+(e&&e.message||'网络问题')+'）。请点“显示备用互评码”，把整段文字发给组织者，效果一样。';$('r-show').hidden=false;$('r-copy').hidden=false}
   }
   $('gen').onclick=()=>{const code=makeCode();$('r-code').textContent=code;
@@ -205,6 +213,7 @@
     $('r-backup').hidden=!!api;$('r-show').hidden=!api;$('r-copy').hidden=!!api;
     if(api)submitCloud(code);else $('r-cloud').hidden=true};
   $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
+  $('r-next').onclick=()=>{me=-1;cur=0;vals=names.map(()=>Array(18).fill(null));submitted=false;save();$('result').hidden=true;renderAll();window.scrollTo({top:0,behavior:'smooth'})};
   $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去 Lark 粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
 
   if(!api){$('who-intro').textContent='选择你自己的名字。接下来先给自己打分，再依次给其他人打分。全部完成后会生成一串互评码，把它发给组织者即可。';$('gen').textContent='生成互评码'}
