@@ -135,12 +135,12 @@
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
   let names=[],api='';
-  try{const h=new URLSearchParams((location.hash||'').replace(/^#/,''));const n=h.get('names');if(n)names=n.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean);api=(h.get('api')||'').trim();if(api&&!/^https:\/\/script\.google(usercontent)?\.com\//.test(api))api=''}catch(e){}
+  try{const h=new URLSearchParams((location.hash||'').replace(/^#/,''));const n=h.get('names')||h.get('n');if(n)names=n.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean);api=(h.get('api')||'').trim();if(!api&&h.get('s'))api='https://script.google.com/macros/s/'+h.get('s').trim()+'/exec';if(api&&!/^https:\/\/script\.google(usercontent)?\.com\//.test(api))api=''}catch(e){}
   const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
   if(names.length<2){$('setup').hidden=false;
     $('s-go').onclick=()=>{const list=$('s-names').value.split(/[\n,，、]/).map(s=>s.trim()).filter(Boolean);
       if(list.length<2||list.length>9){$('s-msg').textContent='请填写 2–9 个姓名';return}
-      const a=$('s-api').value.trim();const url=location.href.split('#')[0]+'#names='+encodeURIComponent(list.join(','))+(a?'&api='+encodeURIComponent(a):'');$('s-link').hidden=false;$('s-link').textContent=url;$('s-msg').textContent='';
+      const a=$('s-api').value.trim();const sid=(a.match(/\/macros\/s\/([^\/]+)\/exec/)||[])[1]||'';const url=location.href.split('#')[0]+'#n='+encodeURIComponent(list.join(','))+(sid?'&s='+sid:'');$('s-link').hidden=false;$('s-link').textContent=url;$('s-msg').textContent='';
       if(window.QRCode){$('s-qr').hidden=false;$('s-qr-box').innerHTML='';try{new QRCode($('s-qr-box'),{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}catch(e){}}
       navigator.clipboard&&navigator.clipboard.writeText(url).then(()=>{$('s-msg').style.color='#2E6B2E';$('s-msg').textContent='链接已复制'}).catch(()=>{})};
     return}
