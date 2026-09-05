@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>侯氏韧性评估互评页</title>
+</head>
+<body style="margin:0">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{--paper:#F7F7F5;--card:#fff;--band:#E9E9E7;--ink:#1F232B;--ink-2:#4A4F58;--ink-3:#858A93;--line:#DCDDD9;--self:#1F232B;--other:#0F5F73;--accent:#0F5F73;
+    --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;--latin:"Jost","Avenir Next","Helvetica Neue",var(--sans);--serif:"Noto Serif SC","Songti SC","SimSun",serif}
+  *{box-sizing:border-box}
+  html,body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:14px 12px 90px}
+  [hidden]{display:none!important}
+  .sheet{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  header.band{background:var(--band);border-radius:12px;padding:10px 18px 8px}
+  .titles .en{font-family:var(--latin);font-weight:300;font-size:15px;color:var(--ink-2);margin:0}
+  .titles .zh{font-family:var(--serif);font-weight:600;font-size:21px;letter-spacing:.1em;margin:2px 0 0;line-height:1.25}
+  .titles .zh small{font-family:var(--sans);font-weight:500;font-size:12px;letter-spacing:.2em;color:var(--ink-2);margin-left:10px;white-space:nowrap;display:inline-block}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 12px 30px -18px rgba(30,35,45,.25);padding:16px 16px}
+  .card.self{--accent:var(--self)}
+  .intro{color:var(--ink-2);font-size:13px;margin:0 0 10px}
+  h3{margin:0 0 8px;font-size:15px;font-weight:500;letter-spacing:.06em}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font:inherit;font-size:14px;border:1px solid #d5d6d2;background:#fff;border-radius:999px;padding:8px 16px;cursor:pointer;color:var(--ink)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;font:inherit;font-size:13px;border:1px solid #d5d6d2;background:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+  .tab .d{width:8px;height:8px;border-radius:50%;background:#d5d6d2}
+  .tab.done .d{background:#7DAA3C}
+  .tab.part .d{background:#F6C50F}
+  .tab.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .target{display:flex;align-items:baseline;gap:10px;padding:6px 0 2px;border-bottom:2px solid var(--accent);margin-bottom:4px}
+  .target b{font-size:20px;font-weight:500;letter-spacing:.06em;color:var(--accent)}
+  .target span{color:var(--ink-3);font-size:12.5px}
+  .scale{display:flex;gap:12px;justify-content:flex-end;font-size:11px;color:var(--ink-3);padding:6px 2px 0;flex-wrap:wrap}
+  .fdim .dh{display:flex;align-items:center;gap:8px;padding:12px 0 4px;font-weight:500;font-size:14px}
+  .fdim .dh .chip2{width:12px;height:12px;border-radius:3px}
+  .fdim .dh .en{font-family:var(--latin);font-weight:300;color:var(--ink-3);font-size:12px}
+  .frow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+  .frow .lb .no{color:var(--ink-3);font-family:var(--latin);margin-right:6px}
+  .frow .lb .en{color:var(--ink-3);font-family:var(--latin);font-weight:300;font-size:11px;display:block}
+  .pills{display:flex;gap:5px}
+  .pill{width:40px;height:38px;border-radius:8px;border:1px solid #d5d6d2;background:#fff;font-family:var(--latin);font-size:16px;color:var(--ink-2);cursor:pointer;padding:0}
+  .pill.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .pill:focus-visible{outline:2px solid var(--other);outline-offset:2px}
+  .frow.miss .lb{color:#8A3B12}
+  .nav{display:flex;gap:8px;justify-content:space-between;padding-top:14px}
+  button.btn{font:inherit;font-size:14px;border:1px solid #c9cac6;background:#fff;color:var(--ink);border-radius:999px;padding:10px 18px;cursor:pointer}
+  button.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.btn:disabled{opacity:.45;cursor:default}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:12px;z-index:5}
+  .bar .prog{flex:1;font-size:13px;color:var(--ink-2)}
+  .bar .prog b{color:var(--ink);font-weight:500}
+  .bar .track{height:5px;border-radius:3px;background:#ececea;margin-top:5px;overflow:hidden}
+  .bar .track i{display:block;height:100%;background:var(--other);width:0;transition:width .25s}
+  .result p{margin:0 0 10px;color:var(--ink-2);font-size:13px}
+  .code{font-family:var(--latin);font-size:15px;letter-spacing:.06em;background:#f1f1ef;border-radius:12px;padding:12px 14px;word-break:break-all;color:var(--other);font-variant-numeric:tabular-nums;line-height:1.7}
+  .msgbox{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;white-space:pre-wrap;color:var(--ink-2);background:#fff;word-break:break-all}
+  .ok{color:#2E6B2E;font-size:12.5px}
+  .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding-top:12px;flex-wrap:wrap}
+  .actions .msg{margin-right:auto;color:#8A3B12;font-size:12.5px}
+  .setup textarea{width:100%;font:inherit;font-size:14px;border:1px solid #d5d6d2;border-radius:8px;padding:8px 10px;min-height:120px;background:#fff;color:var(--ink)}
+  .qr{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .qr .box{background:#fff;padding:8px;border:1px solid var(--line);border-radius:12px}
+  .qr p{margin:0;font-size:13px;color:var(--ink-2);max-width:360px}
+  footer{color:var(--ink-3);font-family:var(--latin);font-weight:300;font-size:11.5px;text-align:center}
+  @media (max-width:480px){.frow{grid-template-columns:1fr;gap:6px}.pill{width:19%;max-width:52px}}
+</style>
+
+<div class="sheet">
+  <header class="band"><div class="titles">
+    <p class="en">Hou's Resilient Enterprise Profile</p>
+    <p class="zh">侯氏韧性企业模型评估<small>班组互评</small></p>
+  </div></header>
+
+  <!-- no names in link: let the organizer paste names -->
+  <section class="card setup" id="setup" hidden>
+    <h3>设置互评名单</h3>
+    <p class="intro">这个链接没有带名单。组织者一般在后台页设置名单并复制链接；也可以在这里临时输入姓名（每行一个）生成链接。</p>
+    <textarea id="s-names" placeholder="张三&#10;李四&#10;王五"></textarea>
+    <label style="display:block;margin-top:10px;font-size:12px;color:var(--ink-2)">Google 表格脚本网址（可选，填了学员提交会自动写进表格）<input id="s-api" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;margin-top:4px;font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:8px 10px"></label>
+    <div class="actions"><span class="msg" id="s-msg"></span><button class="btn primary" id="s-go">生成互评链接</button></div>
+    <div class="msgbox" id="s-link" hidden></div>
+    <div class="qr" id="s-qr" hidden><div class="box" id="s-qr-box"></div><p>让学员用 Lark 扫一扫或相机扫码打开；也可以把上面的链接直接发到群里。</p></div>
+  </section>
+
+  <section class="card" id="who" hidden>
+    <h3>你是哪一位？</h3>
+    <p class="intro" id="who-intro">选择你自己的名字。接下来先给自己打分，再依次给其他人打分，全部完成后点“提交”，分数会直接发送给组织者。</p>
+    <div class="chips" id="who-chips"></div>
+  </section>
+
+  <section class="card" id="rate" hidden>
+    <div class="tabs" id="tabs"></div>
+    <div class="target"><b id="t-name"></b><span id="t-hint"></span></div>
+    <div id="items"></div>
+    <div class="nav"><button class="btn" id="prev">← 上一位</button><span class="msg" id="msg" style="color:#8A3B12;font-size:12.5px;align-self:center"></span><button class="btn primary" id="next">下一位 →</button></div>
+  </section>
+
+  <section class="card result" id="result" hidden>
+    <h3 id="r-title">已提交</h3>
+    <p id="r-intro">请把下面整段文字<b>原样</b>发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。</p>
+    <div class="msgbox" id="r-cloud" hidden style="margin:0 0 10px"></div>
+    <div id="r-backup">
+      <div class="code" id="r-code"></div>
+      <div class="msgbox" id="r-msg"></div>
+    </div>
+    <div class="actions"><span class="ok" id="r-ok"></span><button class="btn" id="r-show" hidden>显示备用互评码</button><button class="btn" id="r-back">返回修改</button><button class="btn primary" id="r-copy">复制整段文字</button></div>
+  </section>
+
+  <footer>© IAOL, International Association of Organization &amp; Leadership. All rights reserved.</footer>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <div class="prog"><span id="p-text"></span><div class="track"><i id="p-fill"></i></div></div>
+  <button class="btn primary" id="gen" disabled>提交</button>
+</div>
+
+<script>
+(function(){
+  const DIMS=[
+    {k:'a',en:'Authenticity',zh:'正心诚意',color:'#F0B23E',items:[[1,'Activating energy','激发活力'],[2,'Keeping faith','坚定信念'],[3,'Exploring meaning','探索意义']]},
+    {k:'b',en:'Symbiosis',zh:'互融共生',color:'#B9CF57',items:[[4,'Expanding networks','拓展网络'],[5,'Pursuing reciprocity','追求互惠'],[6,'Synergizing for coevolution','协同进化']]},
+    {k:'c',en:'Perseverance',zh:'笃行致远',color:'#C69BC8',items:[[7,'Shaping the future','塑造未来'],[8,'Confronting challenges','直面挑战'],[9,'Achieving results','达成结果']]},
+    {k:'d',en:'Planning for the Unexpected',zh:'未雨绸缪',color:'#F6C50F',items:[[10,'Anticipating change','预判变化'],[11,'Identifying risks','识别风险'],[12,'Running a stable business','稳健经营']]},
+    {k:'e',en:'Rising to the Occasion',zh:'临危不乱',color:'#3E9DB4',items:[[13,'Adapting to change','随机应变'],[14,'Uniting as one','联动协作'],[15,'Securing alliances','巩固同盟']]},
+    {k:'f',en:'Winning the Future',zh:'决胜千里',color:'#D6553B',items:[[16,'Being reflective','反思学习'],[17,'Enabling transformation','转型升级'],[18,'Seeking the new','思变求新']]}
+  ];
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+  let names=[],api='';
+  try{const h=new URLSearchParams((location.hash||'').replace(/^#/,''));const n=h.get('names');if(n)names=n.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean);api=(h.get('api')||'').trim();if(api&&!/^https:\/\/script\.google(usercontent)?\.com\//.test(api))api=''}catch(e){}
+  const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
+  if(names.length<2){$('setup').hidden=false;
+    $('s-go').onclick=()=>{const list=$('s-names').value.split(/[\n,，、]/).map(s=>s.trim()).filter(Boolean);
+      if(list.length<2||list.length>9){$('s-msg').textContent='请填写 2–9 个姓名';return}
+      const a=$('s-api').value.trim();const url=location.href.split('#')[0]+'#names='+encodeURIComponent(list.join(','))+(a?'&api='+encodeURIComponent(a):'');$('s-link').hidden=false;$('s-link').textContent=url;$('s-msg').textContent='';
+      if(window.QRCode){$('s-qr').hidden=false;$('s-qr-box').innerHTML='';try{new QRCode($('s-qr-box'),{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}catch(e){}}
+      navigator.clipboard&&navigator.clipboard.writeText(url).then(()=>{$('s-msg').style.color='#2E6B2E';$('s-msg').textContent='链接已复制'}).catch(()=>{})};
+    return}
+
+  const N=names.length,KEY='hou-peer-'+names.join('|');
+  let me=-1,cur=0;let vals=names.map(()=>Array(18).fill(null));
+  try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.names&&d.names.join('|')===names.join('|')){me=d.me;vals=d.vals}}catch(e){}
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({names,me,vals}))}catch(e){}};
+
+  // order: self first, then the others in list order
+  const order=()=>me<0?[]:[me,...names.map((_,i)=>i).filter(i=>i!==me)];
+  const done=i=>vals[i].every(v=>v>=1&&v<=5);
+  const filled=i=>vals[i].filter(v=>v>=1&&v<=5).length;
+
+  $('who-chips').innerHTML=names.map((n,i)=>`<button class="chip" data-i="${i}">${esc(n)}</button>`).join('');
+  $('who-chips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;me=+b.dataset.i;cur=0;save();renderAll()};
+
+  function renderAll(){
+    document.querySelectorAll('#who-chips .chip').forEach(b=>b.classList.toggle('on',+b.dataset.i===me));
+    $('rate').hidden=me<0;$('bar').hidden=me<0;$('result').hidden=true;
+    if(me<0)return;
+    const ord=order();const t=ord[cur];
+    $('tabs').innerHTML=ord.map((i,k)=>`<button class="tab ${k===cur?'on':''} ${done(i)?'done':filled(i)?'part':''}" data-k="${k}"><span class="d"></span>${i===me?'我自己':esc(names[i])}</button>`).join('');
+    $('rate').classList.toggle('self',t===me);
+    $('t-name').textContent=t===me?names[me]+'（自评）':names[t];
+    $('t-hint').textContent=t===me?'请对自己如实打分':`由 ${names[me]} 评价`;
+    $('items').innerHTML=DIMS.map(d=>`<div class="fdim"><div class="dh"><span class="chip2" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${d.en}</span></div>`+
+      d.items.map(it=>{const i=it[0]-1;return `<div class="frow" data-row="${i}"><div class="lb"><span class="no">${it[0]}</span>${it[2]}<span class="en">${it[1]}</span></div><div class="pills">${[1,2,3,4,5].map(v=>`<button type="button" class="pill ${vals[t][i]===v?'on':''}" data-i="${i}" data-v="${v}">${v}</button>`).join('')}</div></div>`}).join('')+'</div>').join('');
+    $('prev').disabled=cur===0;$('next').textContent=cur===ord.length-1?'完成 ✓':'下一位 →';$('msg').textContent='';
+    const total=N*18,got=vals.reduce((a,arr)=>a+arr.filter(v=>v>=1&&v<=5).length,0);const people=ord.filter(done).length;
+    $('p-text').innerHTML=`已完成 <b>${people}/${N}</b> 人 · ${got}/${total} 项`;$('p-fill').style.width=(got/total*100)+'%';$('gen').disabled=people<N;
+  }
+  $('tabs').onclick=e=>{const b=e.target.closest('.tab');if(b){cur=+b.dataset.k;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})}};
+  $('items').onclick=e=>{const p=e.target.closest('.pill');if(!p)return;const t=order()[cur],i=+p.dataset.i,v=+p.dataset.v;vals[t][i]=v;save();
+    document.querySelectorAll(`.pill[data-i="${i}"]`).forEach(b=>b.classList.toggle('on',+b.dataset.v===v));p.closest('.frow').classList.remove('miss');
+    const total=N*18,got=vals.reduce((a,arr)=>a+arr.filter(x=>x>=1&&x<=5).length,0);const people=order().filter(done).length;
+    $('p-text').innerHTML=`已完成 <b>${people}/${N}</b> 人 · ${got}/${total} 项`;$('p-fill').style.width=(got/total*100)+'%';$('gen').disabled=people<N;
+    const tab=$('tabs').children[cur];tab.className='tab on '+(done(t)?'done':'part');
+    if(done(t)&&cur<N-1){setTimeout(()=>{cur++;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})},250)}};
+  $('prev').onclick=()=>{if(cur>0){cur--;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})}};
+  $('next').onclick=()=>{const t=order()[cur];if(!done(t)){const miss=vals[t].map((v,i)=>v?null:i).filter(x=>x!==null);miss.forEach(i=>document.querySelector(`.frow[data-row="${i}"]`).classList.add('miss'));$('msg').textContent=`还有 ${miss.length} 项未打分`;document.querySelector(`.frow[data-row="${miss[0]}"]`).scrollIntoView({block:'center',behavior:'smooth'});return}
+    if(cur<N-1){cur++;renderAll();window.scrollTo({top:$('rate').offsetTop-8,behavior:'smooth'})}else if(!$('gen').disabled)$('gen').click()};
+
+  function makeCode(){
+    // G + N + raterIndex(1-based) + N blocks of 18 digits (in list order) + check digit
+    const blocks=vals.map(a=>a.join(''));const all=blocks.join('');const chk=all.split('').reduce((s,c)=>s+ +c,0)%10;
+    return `G${N}${me+1}-${blocks.join('-')}-${chk}`}
+  async function submitCloud(code){
+    const st=$('r-cloud');st.hidden=false;st.className='msgbox';st.textContent='正在提交到组织者的表格…';
+    try{
+      const res=await fetch(api,{method:'POST',body:JSON.stringify({group:groupId(names),rater:names[me],raterIdx:me,names,blocks:vals,code,time:Date.now()})});
+      const j=await res.json();
+      if(!j.ok)throw new Error(j.error||'服务器拒绝');
+      $('r-title').textContent='提交成功';st.style.borderColor='#7DAA3C';st.style.color='#2E6B2E';st.textContent='✓ 分数已发送给组织者，你已完成。如果之后想修改，点“返回修改”重新提交即可，以最后一次为准。';
+    }catch(e){$('r-title').textContent='提交未成功';st.style.borderColor='#e6c9bd';st.style.color='#8A3B12';st.textContent='自动提交没有成功（'+(e&&e.message||'网络问题')+'）。请点“显示备用互评码”，把整段文字发给组织者，效果一样。';$('r-show').hidden=false;$('r-copy').hidden=false}
+  }
+  $('gen').onclick=()=>{const code=makeCode();$('r-code').textContent=code;
+    $('r-msg').textContent=`【侯氏韧性评估 · 互评码】\n评分人：${names[me]}\n名单：${names.join('、')}\n互评码：${code}`;
+    $('rate').hidden=true;$('bar').hidden=true;$('result').hidden=false;$('r-ok').textContent='';window.scrollTo({top:0,behavior:'smooth'});
+    $('r-title').textContent=api?'正在提交':'互评码已生成';
+    $('r-intro').textContent=api?'分数正在发送给组织者，看到“提交成功”就完成了，可以关闭页面。':'请把下面整段文字原样发给组织者（在 Lark 群里直接粘贴即可）。里面包含你给所有人的分数。';
+    $('r-backup').hidden=!!api;$('r-show').hidden=!api;$('r-copy').hidden=!!api;
+    if(api)submitCloud(code);else $('r-cloud').hidden=true};
+  $('r-back').onclick=()=>{$('result').hidden=true;$('rate').hidden=false;$('bar').hidden=false};
+  $('r-copy').onclick=async()=>{const t=$('r-msg').textContent;try{await navigator.clipboard.writeText(t);$('r-ok').textContent='已复制，去 Lark 粘贴发送吧 ✓'}catch(e){const r=document.createRange();r.selectNodeContents($('r-msg'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('r-ok').textContent='已选中文字，请长按复制'}};
+
+  if(!api){$('who-intro').textContent='选择你自己的名字。接下来先给自己打分，再依次给其他人打分。全部完成后会生成一串互评码，把它发给组织者即可。';$('gen').textContent='生成互评码'}
+  $('r-show').onclick=()=>{$('r-backup').hidden=false;$('r-show').hidden=true};
+  $('who').hidden=false;renderAll();
+})();
+</script>
+
+</body>
+</html>

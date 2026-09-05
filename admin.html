@@ -7,6 +7,7 @@
 </head>
 <body style="margin:0">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root{
     --paper:#F7F7F5; --card:#FFFFFF; --band:#E9E9E7; --ink:#1F232B; --ink-2:#4A4F58; --ink-3:#858A93;
@@ -171,6 +172,19 @@
   .ext .parsed.bad{background:#FBE5DF;color:#8A3B12}
   .ext .parsed b{font-family:var(--latin);letter-spacing:.04em;color:var(--ink)}
   .view-only #btn-group,.view-only #btn-self,.view-only #btn-other,.view-only #btn-del,.view-only #btn-link,.view-only .newp input,.view-only #np-add,.view-only #raters button,.view-only #btn-cloud{display:none!important}
+  .flow{padding:14px 18px 12px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .step{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .step .k{font-size:11px;color:var(--ink-3);letter-spacing:.1em}
+  .step .k b{display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--ink);color:#fff;font-family:var(--latin);font-weight:500;font-size:11px;text-align:center;line-height:18px;margin-right:6px;letter-spacing:0}
+  .step .v{font-size:13.5px;font-weight:500;line-height:1.3;min-height:2.6em}
+  .step .v.ok{color:#2E6B2E}.step .v.warn{color:#8A3B12}
+  .step .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+  .step .acts button{padding:4px 10px;font-size:12px}
+  .step.done{border-color:#cfe0b3;background:#f7faf0}
+  .qrwrap{grid-column:1/-1;display:flex;gap:16px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+  .qrwrap .box{background:#fff;padding:6px;border:1px solid var(--line);border-radius:10px}
+  .qrwrap p{margin:0;font-size:12.5px;color:var(--ink-2)}
+  @media (max-width:1000px){.flow{grid-template-columns:repeat(2,1fr)}}
   footer{display:flex;justify-content:space-between;align-items:center;color:var(--ink-2);font-family:var(--latin);font-weight:300;font-size:12.5px;padding:0 6px;flex-wrap:wrap;gap:6px}
   footer .zh{font-family:var(--sans);color:var(--ink-3);font-size:11.5px}
 
@@ -218,6 +232,7 @@
   </div>
 
   <!-- list view -->
+  <section class="card flow" id="flow" hidden></section>
   <section class="card people" id="view-list">
     <div>
       <h2>People <span class="zh">被评估人</span><span class="note" id="people-note">点开一位查看对照图</span></h2>
@@ -481,7 +496,7 @@
   /* ---------- app state / routing ---------- */
   let people=[],person=null,pid=null,unPerson=null;
   const show=(list)=>{$('view-list').hidden=!list;$('view-person').hidden=list;
-    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list;$('btn-cloud').hidden=!list||IN_CLAUDE||!apiUrl();$('btn-img-all').hidden=!list||IN_CLAUDE};
+    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list||(!IN_CLAUDE);$('btn-cloud').hidden=true;$('btn-img-all').hidden=!list||IN_CLAUDE;$('flow').hidden=!list||IN_CLAUDE||VIEW_ONLY;if(!$('flow').hidden)renderFlow()};
   function renderWho(){
     if(!person){$('who').innerHTML=`<span class="st">${people.length} 位被评估人</span>`;return}
     const st=stats(person);
@@ -565,7 +580,7 @@
   const IN_CLAUDE=!!(window.claude&&typeof window.claude.use==='function');
   let VIEW_ONLY=false;
   const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
-  const lget=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+  const lget=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){};if(typeof renderFlow==='function'&&(k==='hou-api-url'||k==='hou-group-names'))setTimeout(renderFlow,0)};
   const apiUrl=()=>lget('hou-api-url'), groupNames=()=>splitNames(lget('hou-group-names'));
   async function importCodes(codes,progress){
     const names=codes[0].names;const ids={},canon={};
@@ -581,7 +596,7 @@
     if(store.refresh)store.refresh();
     return {raters:Object.keys(byRater).length,writes};
   }
-  let cloudBusy=false,cloudSeen={};
+  let cloudBusy=false,cloudSeen={},cloudStat={got:[],total:0,checked:0,err:''};
   async function pullCloud({silent=false}={}){
     const api=apiUrl();if(!api||cloudBusy)return;cloudBusy=true;
     const b=$('btn-cloud');if(b){b.disabled=true}
@@ -596,11 +611,36 @@
       if(fresh.length){const codes=fresh.map(s=>({names:s.names,rater:s.names[s.raterIdx]||s.rater,raterIdx:+s.raterIdx,blocks:s.blocks}));const r=await importCodes(codes);
         notice(`已从表格收到 ${fresh.length} 份新提交（${codes.map(c=>c.rater).join('、')}），共写入 ${r.writes} 份分数。`)}
       else if(!silent)notice(`表格里目前共 ${subs.length} 份提交，没有新的。`);
-      const names=gn.length?gn:(subs[0]&&subs[0].names)||[];const got=new Set(subs.map(s=>s.names[s.raterIdx]||s.rater));
+      const names=gn.length?gn:(subs[0]&&subs[0].names)||[];const got=new Set(subs.map(s=>s.names[s.raterIdx]||s.rater));cloudStat={got:[...got],total:names.length,checked:Date.now(),err:''};renderFlow();
       if(b){b.textContent=`拉取提交 · 已收 ${got.size}${names.length?'/'+names.length:''}`;b.title=names.filter(n=>!got.has(n)).length?'还缺：'+names.filter(n=>!got.has(n)).join('、'):'全部收齐'}
-    }catch(e){if(!silent)toastErr('拉取失败。请检查脚本网址是否以 /exec 结尾、部署权限是否为“任何人”。',e)}
+    }catch(e){cloudStat.err=(e&&e.message)||'拉取失败';cloudStat.checked=Date.now();renderFlow();if(!silent)toastErr('拉取失败。请检查脚本网址是否以 /exec 结尾、部署权限是否为“任何人”。',e)}
     finally{cloudBusy=false;if(b)b.disabled=false}
   }
+  let qrOpen=false;
+  function renderFlow(){
+    const el=$('flow');if(el.hidden)return;
+    const api=apiUrl(),names=groupNames(),n=names.length,got=cloudStat.got.filter(g=>names.some(x=>sameName(x,g))).length;
+    const link=n>=2?EXT_URL+'#names='+encodeURIComponent(names.join(','))+(api?'&api='+encodeURIComponent(api):''):'';
+    const share=(api&&n>=2)?location.href.split('#')[0]+'#api='+encodeURIComponent(api)+'&names='+encodeURIComponent(names.join(','))+'&view=1':'';
+    const t=cloudStat.checked?new Date(cloudStat.checked).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):'';
+    el.innerHTML=`
+      <div class="step ${api?'done':''}"><div class="k"><b>1</b>GOOGLE 表格</div><div class="v ${api?'ok':'warn'}">${api?'已连接 ✓':'未设置'}</div><div class="acts"><button data-act="setup">${api?'修改':'设置'}</button></div></div>
+      <div class="step ${n>=2?'done':''}"><div class="k"><b>2</b>名单</div><div class="v ${n>=2?'ok':'warn'}">${n>=2?`${n} 人：${esc(names.join('、'))}`:'未填写'}</div><div class="acts"><button data-act="setup">${n>=2?'编辑':'填写'}</button></div></div>
+      <div class="step ${link?'done':''}"><div class="k"><b>3</b>学员链接</div><div class="v">${link?'学员打开后选自己的名字开始打分':'先完成第 1、2 步'}</div><div class="acts"><button class="other" data-act="copy-link" ${link?'':'disabled'}>复制链接</button><button data-act="qr" ${link?'':'disabled'}>${qrOpen?'收起二维码':'二维码'}</button></div></div>
+      <div class="step ${n>=2&&got>=n?'done':''}"><div class="k"><b>4</b>收到提交</div><div class="v ${cloudStat.err?'warn':(n&&got>=n?'ok':'')}">${cloudStat.err?'拉取失败：'+esc(cloudStat.err):(api?`${got}${n?' / '+n:''} 人${t?' · '+t+' 更新':''}${n&&got<n&&got>0?'<br><span style="font-weight:400;color:var(--ink-3)">缺：'+esc(names.filter(x=>!cloudStat.got.some(g=>sameName(g,x))).join('、'))+'</span>':''}`:'连接表格后自动统计')}</div><div class="acts"><button data-act="pull" ${api?'':'disabled'}>立即拉取</button><button data-act="manual">手工导入</button></div></div>
+      <div class="step"><div class="k"><b>5</b>结果</div><div class="v">点开下方人员看图；或分享只读直播页</div><div class="acts"><button data-act="share" ${share?'':'disabled'}>复制直播链接</button><button data-act="export">导出全员合图</button></div></div>
+      ${qrOpen&&link?`<div class="qrwrap"><div class="box" id="flow-qr"></div><p><b>学员链接二维码</b><br>投到大屏，学员用 Lark 扫一扫或相机扫码即可打开打分页。<br><span style="word-break:break-all;color:var(--ink-3)">${esc(link)}</span></p></div>`:''}`;
+    if(qrOpen&&link&&window.QRCode){try{new QRCode($('flow-qr'),{text:link,width:180,height:180,correctLevel:QRCode.CorrectLevel.M})}catch(e){}}
+  }
+  $('flow').addEventListener('click',async e=>{const b=e.target.closest('button[data-act]');if(!b||b.disabled)return;const act=b.dataset.act;
+    const api=apiUrl(),names=groupNames();
+    if(act==='setup'||act==='manual'){openGroup();if(act==='manual'){const ta=document.querySelector('#g-text');ta&&ta.scrollIntoView({block:'center'});ta&&ta.focus()}return}
+    if(act==='copy-link'){const url=EXT_URL+'#names='+encodeURIComponent(names.join(','))+(api?'&api='+encodeURIComponent(api):'');try{await navigator.clipboard.writeText(url);notice('学员链接已复制，发到 Lark 群即可')}catch(err){notice('无法自动复制，请点“二维码”后手动复制显示的链接',{err:true})}return}
+    if(act==='qr'){qrOpen=!qrOpen;renderFlow();return}
+    if(act==='pull'){await pullCloud();return}
+    if(act==='share'){const url=location.href.split('#')[0]+'#api='+encodeURIComponent(api)+'&names='+encodeURIComponent(names.join(','))+'&view=1';try{await navigator.clipboard.writeText(url);notice('结果直播链接已复制：打开的人只能看，每 20 秒自动更新')}catch(err){notice('无法自动复制',{err:true})}return}
+    if(act==='export'){b.disabled=true;try{await exportAll(people);notice('合图已开始下载')}catch(err){toastErr('导出失败。',err)}b.disabled=false}
+  });
   function openGroup(){
     const existing=people.filter(p=>!p.sample).map(p=>p.name);
     const ov=$('overlay');
@@ -710,7 +750,7 @@
   $('btn-print').addEventListener('click',()=>window.print());
   $('btn-img').addEventListener('click',async()=>{if(!person)return;const b=$('btn-img');b.disabled=true;b.textContent='生成中…';try{await exportPerson(person);notice('图片已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出图片'});
   $('btn-img-all').addEventListener('click',async()=>{const b=$('btn-img-all');b.disabled=true;b.textContent='生成中…';try{await exportAll(people);notice('合图已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全员合图'});
-  if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片；列表页可导出全员合图';}
+  if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片';$('newp-note').textContent='通常不需要手动新建，学员提交后会自动出现在这里。';}
   $('btn-group').addEventListener('click',openGroup);
   $('btn-cloud').addEventListener('click',()=>pullCloud());
   setInterval(()=>{if(!IN_CLAUDE&&apiUrl()&&$('overlay').hidden)pullCloud({silent:true})},20000);
