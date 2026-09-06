@@ -63,6 +63,8 @@
   .pcard .stats b{font-weight:500;color:var(--ink);font-size:15px;margin-right:2px}
   .pcard .stats .o b{color:var(--other)}
   .pcard.sample{border-style:dashed}
+  .pcard.all{border-color:var(--other);background:#F3F8F9}
+  .pcard.all .nm{color:var(--other)}
   .newp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
   .newp input{font:inherit;font-size:13px;border:1px solid #d5d6d2;border-radius:8px;padding:6px 10px;background:#fff;color:var(--ink);min-width:160px}
   .newp input:focus{outline:none;border-color:var(--ink)}
@@ -461,12 +463,13 @@
   }
 
   /* ---------- stats ---------- */
-  const isNum=v=>typeof v==='number'&&v>=1&&v<=5;
   const mean=arr=>{const v=arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null};
   const fmt=v=>v===null?'–':(Math.round(v*10)/10).toFixed(1);
   const fmtGap=v=>v===null?'–':(v>0?'+':'')+(Math.round(v*10)/10).toFixed(1);
+  const fmtS=v=>(v===null||v===undefined||isNaN(v))?'–':(Number.isInteger(v)?String(v):fmt(v));
+  const isNum=v=>typeof v==='number'&&v>=1&&v<=5;
   function stats(p){
-    const self=(p.self&&p.self.length===18)?p.self:Array(18).fill(null);
+    const self=(p.self&&p.self.length===18)?p.self.map(v=>isNum(v)?v:null):Array(18).fill(null);
     const ratings=(p.ratings||[]).filter(r=>Array.isArray(r.scores)&&r.scores.length===18);
     const others=ITEMS.map((_,i)=>mean(ratings.map(r=>r.scores[i]).filter(isNum)));
     const range=ITEMS.map((_,i)=>{const v=ratings.map(r=>r.scores[i]).filter(isNum);return v.length?[Math.min(...v),Math.max(...v)]:null});
@@ -496,24 +499,25 @@
       h+=`<tr class="dim"><td colspan="${multi?5:4}"><span class="chip" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${esc(d.en)}</span><span class="avg">自评 <b>${fmt(sm)}</b> · 他评 <i>${fmt(om)}</i></span></td></tr>`;
       d.items.forEach(it=>{const i=it[0]-1;const sv=st.self[i],ov=st.others[i];const gap=(isNum(sv)&&ov!==null)?sv-ov:null;
         h+=`<tr><td class="item"><span class="no">${it[0]}</span>${it[2]}<span class="en">${esc(it[1])}</span></td>`;
-        h+=`<td class="self ${isNum(sv)?'':'blank'}">${isNum(sv)?sv:'–'}</td><td class="mean ${ov===null?'blank':''}">${fmt(ov)}</td>`;
+        h+=`<td class="self ${isNum(sv)?'':'blank'}">${fmtS(sv)}</td><td class="mean ${ov===null?'blank':''}">${fmt(ov)}</td>`;
         if(multi)h+=`<td class="range">${st.range[i]?st.range[i][0]+' – '+st.range[i][1]:'–'}</td>`;
         h+=`<td class="gap ${gap>0?'pos':gap<0?'neg':''}">${fmtGap(gap)}</td></tr>`});
     });
     h+=`</tbody><tfoot><tr><td style="text-align:left;padding-left:2px">18 项平均</td><td>${fmt(st.selfAll)}</td><td class="mean">${fmt(st.otherAll)}</td>${multi?'<td></td>':''}<td>${(st.selfAll!==null&&st.otherAll!==null)?fmtGap(st.selfAll-st.otherAll):'–'}</td></tr></tfoot>`;
     $('tbl').innerHTML=h;
     $('t-self').innerHTML=`${fmt(st.selfAll)}<small>/ 5</small>`;
-    $('t-other').innerHTML=`${fmt(st.otherAll)}<small>/ 5 · ${st.n} 人</small>`;
+    $('t-other').innerHTML=`${fmt(st.otherAll)}<small>/ 5 · ${st.n} ${pid==='all'?'份':'人'}</small>`;
     $('t-gap').textContent=(st.selfAll!==null&&st.otherAll!==null)?fmtGap(st.selfAll-st.otherAll):'–';
-    $('legend-n').textContent=st.n?`（${st.n} 人${st.n>1?'平均':''}）`:'（尚无）';
+    $('legend-n').textContent=st.n?(pid==='all'?`（${st.n} 份平均）`:`（${st.n} 人${st.n>1?'平均':''}）`):'（尚无）';
   }
   function buildInsights(st){
     const out=[];
     ITEMS.forEach((it,i)=>{const sv=st.self[i],ov=st.others[i];if(!isNum(sv)||ov===null)return;const gap=sv-ov;
-      if(gap>=1)out.push({cls:'blind',tag:'可能的盲区',it,txt:`自评 ${sv}，他评 ${fmt(ov)}。自己看得比他人高，值得追问他人看到了什么。`,w:gap});
-      else if(gap<=-1)out.push({cls:'hidden',tag:'隐藏的优势',it,txt:`自评 ${sv}，他评 ${fmt(ov)}。他人比你更肯定这一项，可以更有意识地发挥。`,w:-gap});
-      else if(sv>=4&&ov>=4)out.push({cls:'strong',tag:'共识优势',it,txt:`自评 ${sv}，他评 ${fmt(ov)}，双方一致认可。`,w:.5});
-      else if(sv<=2&&ov<=2)out.push({cls:'weak',tag:'共识短板',it,txt:`自评 ${sv}，他评 ${fmt(ov)}，双方都认为需要加强，优先改进。`,w:.6});
+      const G=pid==='all';
+      if(gap>=1)out.push({cls:'blind',tag:'可能的盲区',it,txt:`自评 ${fmtS(sv)}，他评 ${fmt(ov)}。${G?'团队自我评价明显高于他人评价，值得集体讨论。':'自己看得比他人高，值得追问他人看到了什么。'}`,w:gap});
+      else if(gap<=-1)out.push({cls:'hidden',tag:'隐藏的优势',it,txt:`自评 ${fmtS(sv)}，他评 ${fmt(ov)}。${G?'他人比团队自己更肯定这一项。':'他人比你更肯定这一项，可以更有意识地发挥。'}`,w:-gap});
+      else if(sv>=4&&ov>=4)out.push({cls:'strong',tag:'共识优势',it,txt:`自评 ${fmtS(sv)}，他评 ${fmt(ov)}，双方一致认可。`,w:.5});
+      else if(sv<=2.5&&ov<=2.5)out.push({cls:'weak',tag:'共识短板',it,txt:`自评 ${fmtS(sv)}，他评 ${fmt(ov)}，双方都认为需要加强，优先改进。`,w:.6});
     });
     out.sort((a,b)=>b.w-a.w);
     const el=$('insights');
@@ -521,11 +525,20 @@
     el.innerHTML=out.slice(0,7).map(o=>`<div class="ins ${o.cls}"><span class="tag">${o.tag}</span><div class="body"><b><span class="n">${o.it.n} · ${o.it.dim.zh} · </span>${o.it.zh}</b>　${o.txt}</div></div>`).join('');
   }
   function buildRaters(st){
+    if(pid==='all'){$('raters-note').textContent=`共 ${st.n} 份他评，来自所有被评估人收到的评分`;const by={};st.ratings.forEach(r=>{by[r.target]=(by[r.target]||0)+1});$('raters').innerHTML=Object.entries(by).map(([k,c])=>`<div class="rrow"><span class="rn">${esc(k)}</span><span class="rr">收到 ${c} 份</span></div>`).join('')||'<div class="ins-empty">还没有他评</div>';return}
     $('raters-note').textContent=st.n?`共 ${st.n} 人已为其打分`:'还没有人为其打分';
     const rs=st.ratings.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
     $('raters').innerHTML=rs.map(r=>`<div class="rrow"><span class="rn">${esc(r.rater)||'未署名'}</span><span class="rr">${esc(r.relation||'')}</span><span class="rm">${fmt(mean(r.scores))}</span><span class="rt">${r.createdAt?new Date(r.createdAt).toLocaleDateString('zh-CN'):''}</span><button class="ghost" data-delr="${esc(r.id)}" title="删除这份他评">删除</button></div>`).join('');
   }
 
+  /* ---------- group summary: every self-rating and every other-rating averaged ---------- */
+  function groupPerson(){
+    const ps=people.filter(p=>!p.sample);
+    const selfRows=ps.map(p=>p.self).filter(s=>Array.isArray(s)&&s.length===18);
+    const self=ITEMS.map((_,i)=>mean(selfRows.map(s=>s[i]).filter(isNum)));
+    const ratings=[];ps.forEach(p=>(p.ratings||[]).forEach(r=>{if(Array.isArray(r.scores)&&r.scores.length===18)ratings.push({...r,target:p.name})}));
+    return {id:'all',name:'全员总览',org:`基于 ${selfRows.length} 人自评、${ratings.length} 份他评`,self:self.every(v=>v===null)?null:self,ratings,selfCount:selfRows.length,isGroup:true,createdAt:0};
+  }
   /* ---------- app state / routing ---------- */
   let people=[],person=null,pid=null,unPerson=null;
   const show=(list)=>{$('view-list').hidden=!list;$('view-person').hidden=list;
@@ -533,11 +546,14 @@
   function renderWho(){
     if(!person){$('who').innerHTML=`<span class="st">${people.length} 位被评估人</span>`;return}
     const st=stats(person);
+    if(person.isGroup){$('who').innerHTML=`<b>全员总览</b>${esc(person.org)}<div class="st">自评曲线 = 每人自评逐项平均；他评曲线 = 全部他评逐项平均</div>`;return}
     $('who').innerHTML=`<b>${esc(person.name)}${person.sample?' <span style="font-size:11px;color:var(--ink-3);letter-spacing:0">示例</span>':''}</b>${esc(person.org)||''}<div class="st">自评 ${st.selfAll===null?'未填':'已填'} · 他评 ${st.n} 份 · ${person.createdAt?new Date(person.createdAt).toLocaleDateString('zh-CN'):''}</div>`;
   }
   function renderList(){
     $('pempty').hidden=people.length>0;
-    $('plist').innerHTML=people.map(p=>{const st=stats(p);
+    const gp=groupPerson(),gst=stats(gp);
+    const groupCard=people.filter(p=>!p.sample).length?`<button class="pcard all" data-open="all"><span class="nm">全员总览<small>${esc(gp.org)}</small></span><span class="org">所有人的自评与他评分别取平均</span><span class="stats"><span>自评 <b>${gst.selfAll===null?'—':fmt(gst.selfAll)}</b></span><span class="o">他评 <b>${gst.otherAll===null?'—':fmt(gst.otherAll)}</b></span></span></button>`:'';
+    $('plist').innerHTML=groupCard+people.map(p=>{const st=stats(p);
       return `<button class="pcard ${p.sample?'sample':''}" data-open="${esc(p.id)}"><span class="nm">${esc(p.name)}${p.sample?'<small>示例</small>':''}</span><span class="org">${esc(p.org)||'&nbsp;'}</span><span class="stats"><span>自评 <b>${st.selfAll===null?'—':fmt(st.selfAll)}</b></span><span class="o">他评 <b>${st.otherAll===null?'—':fmt(st.otherAll)}</b></span><span>${st.n} 份他评</span></span></button>`}).join('');
     renderWho();
   }
@@ -545,6 +561,7 @@
     if(!person){show(true);renderWho();return}
     const st=stats(person);buildTable(st);drawPlot(st);buildInsights(st);buildRaters(st);renderWho();
     $('btn-self').textContent=IN_CLAUDE?(st.selfAll===null?'填写自评':'修改自评'):(st.selfAll===null?'手动录入自评':'手动修改自评');$('btn-other').textContent=IN_CLAUDE?'我来填一份他评':'手动录入他评';
+    const G=pid==='all';['btn-self','btn-other','btn-del','btn-link'].forEach(id=>{if(G)$(id).hidden=true});
   }
   const hashParams=()=>{try{return new URLSearchParams((location.hash||'').replace(/^#/,''))}catch(e){return new URLSearchParams()}};
   function setHash(pidOrNull){const q=hashParams();if(pidOrNull)q.set('p',pidOrNull);else q.delete('p');const s=q.toString();try{history.replaceState(null,'',s?'#'+s:location.pathname+location.search)}catch(e){}}
@@ -552,6 +569,7 @@
     if(unPerson){unPerson();unPerson=null}
     pid=id;person=null;show(false);
     setHash(id);
+    if(id==='all'){person=groupPerson();renderPerson();return}
     unPerson=store.onPerson(id,p=>{if(!p){closePerson();return}person=p;renderPerson()});
   }
   function closePerson(){if(unPerson){unPerson();unPerson=null}pid=null;person=null;show(true);if(store&&store.refresh)store.refresh();setHash(null);renderList()}
@@ -615,7 +633,8 @@
   let VIEW_ONLY=false;
   const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
   const lget=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){};if(typeof renderFlow==='function'&&(k==='hou-api-url'||k==='hou-group-names'))setTimeout(renderFlow,0)};
-  const apiUrl=()=>lget('hou-api-url'), groupNames=()=>splitNames(lget('hou-group-names'));
+  const DEFAULT_NAMES=['Head','Tommy','Janice','Sammi','Yoga','Jayden','Ping'];
+  const apiUrl=()=>lget('hou-api-url'), groupNames=()=>{const n=splitNames(lget('hou-group-names'));return n.length?n:DEFAULT_NAMES.slice()};
   async function importCodes(codes,progress){
     const names=codes[0].names;const ids={},canon={};
     for(const n of names){let p=findPerson(n);ids[n]=p?p.id:await store.addPerson({name:n,org:'',self:null,createdAt:Date.now()});canon[n]=p?p.name:n}
@@ -771,7 +790,7 @@
     ctx.font=`500 26px ${SANS}`;ctx.fillStyle='#4A4F58';ctx.fillText('自评 · 他评 对照',100,218);
     ctx.textAlign='right';ctx.fillStyle='#1F232B';ctx.font=`500 44px ${SANS}`;ctx.fillText(p.name,W-100,140);
     ctx.font=`24px ${SANS}`;ctx.fillStyle='#4A4F58';ctx.fillText([p.org,new Date().toLocaleDateString('zh-CN')].filter(Boolean).join(' · '),W-100,180);
-    ctx.fillText(`自评均分 ${fmt(st.selfAll)} · 他评均分 ${fmt(st.otherAll)} · 他评 ${st.n} 份`,W-100,218);
+    ctx.fillText(p.isGroup?`团队自评均分 ${fmt(st.selfAll)} · 团队他评均分 ${fmt(st.otherAll)}`:`自评均分 ${fmt(st.selfAll)} · 他评均分 ${fmt(st.otherAll)} · 他评 ${st.n} 份`,W-100,218);
     ctx.drawImage(img,100,270,1400,1400);
     legend(ctx,420,1720,st.n);
     ctx.fillStyle='#858A93';ctx.font=`300 20px Jost,${SANS}`;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText('© IAOL, International Association of Organization & Leadership. All rights reserved.',W/2,1900);
@@ -779,6 +798,7 @@
   }
   async function exportAll(list){
     const ps=list.filter(p=>!p.sample);if(!ps.length){notice('还没有人员');return}
+    ps.unshift(groupPerson());
     const cols=ps.length<=4?ps.length:Math.ceil(ps.length/2),rows=Math.ceil(ps.length/cols);const cell=760,pad=60,head=210,foot=140;
     const W=pad*2+cols*cell,H=head+rows*(cell+70)+foot;const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
@@ -828,7 +848,7 @@
     store=s;const b=$('badge-store');
     if(s.mode==='db'){b.className='badge dot';b.textContent='共享数据 · 所有打开此页的人实时同步'}
     else{b.hidden=true}
-    store.onPeople(list=>{people=list;renderList()});
+    store.onPeople(list=>{people=list;renderList();if(pid==='all'){person=groupPerson();renderPerson()}});
     const q=hashParams();if(q.get('p'))openPerson(q.get('p'));
     if(!IN_CLAUDE&&apiUrl())pullCloud({silent:true});
   }
