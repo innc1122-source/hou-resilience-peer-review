@@ -8,6 +8,7 @@
 <body style="margin:0">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root{
     --paper:#F7F7F5; --card:#FFFFFF; --band:#E9E9E7; --ink:#1F232B; --ink-2:#4A4F58; --ink-3:#858A93;
@@ -235,6 +236,7 @@
     <button id="btn-group" class="other">班组互评 · 名单 / 链接 / 表格</button>
     <button id="btn-cloud" hidden>拉取提交</button>
     <button id="btn-img-all" hidden>导出全员合图</button>
+    <button id="btn-zip" hidden>导出全部图片（压缩包）</button>
     <button id="btn-wipe" class="danger ghost" hidden>清空本页数据</button>
     <button id="btn-del" class="danger ghost" hidden>删除此人</button>
     <span class="spacer"></span>
@@ -543,7 +545,7 @@
   /* ---------- app state / routing ---------- */
   let people=[],person=null,pid=null,unPerson=null;
   const show=(list)=>{$('view-list').hidden=!list;$('view-person').hidden=list;
-    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list||(!IN_CLAUDE);$('btn-cloud').hidden=true;$('btn-img-all').hidden=!list||IN_CLAUDE;$('btn-wipe').hidden=!list||IN_CLAUDE||VIEW_ONLY;$('flow').hidden=!list||IN_CLAUDE||VIEW_ONLY;if(!$('flow').hidden)renderFlow()};
+    ['btn-back','btn-self','btn-other','btn-del'].forEach(id=>$(id).hidden=list);$('btn-link').hidden=list||!IN_CLAUDE;$('btn-print').hidden=list||!IN_CLAUDE;$('btn-img').hidden=list||IN_CLAUDE;$('btn-group').hidden=!list||(!IN_CLAUDE);$('btn-cloud').hidden=true;$('btn-img-all').hidden=!list||IN_CLAUDE;$('btn-zip').hidden=!list||IN_CLAUDE;$('btn-wipe').hidden=!list||IN_CLAUDE||VIEW_ONLY;$('flow').hidden=!list||IN_CLAUDE||VIEW_ONLY;if(!$('flow').hidden)renderFlow()};
   function renderWho(){
     if(!person){$('who').innerHTML=`<span class="st">${people.length} 位被评估人</span>`;return}
     const st=stats(person);
@@ -700,7 +702,7 @@
       <div class="step ${n>=2?'done':''}"><div class="k"><b>2</b>名单</div><div class="v ${n>=2?'ok':'warn'}">${n>=2?`${n} 人：${esc(names.join('、'))}`:'未填写'}</div><div class="acts"><button data-act="setup">${n>=2?'编辑':'填写'}</button></div></div>
       <div class="step ${link?'done':''}"><div class="k"><b>3</b>学员链接</div><div class="v">${link?'学员打开后选自己的名字开始打分':'先完成第 1、2 步'}</div><div class="acts"><button class="other" data-act="copy-link" ${link?'':'disabled'}>复制链接</button><button data-act="qr" ${link?'':'disabled'}>${qrOpen?'收起二维码':'二维码'}</button></div></div>
       <div class="step ${n>=2&&got>=n?'done':''}"><div class="k"><b>4</b>收到提交</div><div class="v ${cloudStat.err?'warn':(n&&got>=n?'ok':'')}">${cloudStat.err?'拉取失败：'+esc(cloudStat.err):(api?`${got}${n?' / '+n:''} 人${t?' · '+t+' 更新':''}${n&&got<n&&got>0?'<br><span style="font-weight:400;color:var(--ink-3)">缺：'+esc(names.filter(x=>!cloudStat.got.some(g=>sameName(g,x))).join('、'))+'</span>':''}`:'连接表格后自动统计')}${(cloudDiag&&!cloudDiag.err&&cloudDiag.matched===0&&cloudDiag.others.length)?`<br><span style="color:#8A3B12;font-weight:400">表格里有 ${cloudDiag.valid} 份提交，但名单与后台不一致</span>`:''}</div><div class="acts"><button data-act="pull" ${api?'':'disabled'}>立即拉取</button>${(cloudDiag&&cloudDiag.others.length)?'<button class="other" data-act="adopt">采用表格里的名单</button>':''}<button data-act="manual">手工导入</button><button class="ghost" data-act="diag">${diagOpen?'收起诊断':'诊断'}</button></div></div>
-      <div class="step"><div class="k"><b>5</b>结果</div><div class="v">点开下方人员看图；或分享只读直播页</div><div class="acts"><button data-act="share" ${share?'':'disabled'}>复制直播链接</button><button data-act="export">导出全员合图</button></div></div>
+      <div class="step"><div class="k"><b>5</b>结果</div><div class="v">点开下方人员看图；或分享只读直播页</div><div class="acts"><button data-act="share" ${share?'':'disabled'}>复制直播链接</button><button data-act="export">全员合图</button><button data-act="zip">全部图片 zip</button></div></div>
       ${diagOpen?`<div class="qrwrap" style="display:block"><b style="font-size:13px">诊断</b>${cloudDiag?`<div style="font-size:12.5px;color:var(--ink-2);margin:4px 0 8px">最近拉取 ${new Date(cloudDiag.at).toLocaleTimeString('zh-CN')} · HTTP ${esc(cloudDiag.http||'—')} · 表格总行数 ${cloudDiag.total} · 格式有效 ${cloudDiag.valid} · 属于当前名单 ${cloudDiag.matched}${cloudDiag.err?' · <span style="color:#8A3B12">错误：'+esc(cloudDiag.err)+'</span>':''}<br>后台名单：${esc(names.join('、'))||'（空）'}${cloudDiag.others.length?'<br>表格中其他名单：'+cloudDiag.others.map(o=>esc(o.names)+'（'+o.count+' 份）').join('；'):''}</div>
         <div style="overflow:auto;max-height:220px"><table style="font-size:12px"><thead><tr><th style="text-align:left;padding:2px 8px">时间</th><th style="text-align:left;padding:2px 8px">评分人</th><th style="text-align:left;padding:2px 8px">名单</th><th style="text-align:left;padding:2px 8px">状态</th></tr></thead><tbody>${cloudDiag.rows.map(r=>`<tr><td style="padding:2px 8px;white-space:nowrap">${r.time?new Date(r.time).toLocaleString('zh-CN'):'—'}</td><td style="padding:2px 8px">${esc(r.rater)}</td><td style="padding:2px 8px;color:var(--ink-3)">${esc(r.names)}</td><td style="padding:2px 8px;color:${r.status==='已计入'?'#2E6B2E':'#8A3B12'}">${r.status}</td></tr>`).join('')||'<tr><td colspan="4" style="padding:6px 8px;color:var(--ink-3)">表格里没有任何行</td></tr>'}</tbody></table></div>`:'<div style="font-size:12.5px;color:var(--ink-3);margin-top:4px">尚未拉取过，点“立即拉取”。</div>'}</div>`:''}
       ${qrOpen&&link?`<div class="qrwrap"><div class="box" id="flow-qr"></div><p><b>学员链接二维码</b><br>投到大屏，学员用 Lark 扫一扫或相机扫码即可打开打分页。<br><input id="flow-link" readonly value="${esc(link)}" style="width:100%;margin-top:6px;font:inherit;font-size:12px;color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:5px 8px" onclick="this.select()"><span style="color:var(--ink-3);font-size:11.5px">点一下上面的框会全选，按 ⌘C / Ctrl+C 也能复制。</span></p></div>`:''}`;
@@ -716,6 +718,7 @@
     if(act==='pull'){await pullCloud();return}
     if(act==='share'){await copyText(resultsLink(names,api),'结果直播链接');return}
     if(act==='export'){b.disabled=true;try{await exportAll(people);notice('合图已开始下载')}catch(err){toastErr('导出失败。',err)}b.disabled=false}
+    if(act==='zip'){b.disabled=true;const t=b.textContent;try{await exportZip(people,(i,n)=>{b.textContent=`${i}/${n}…`});notice('压缩包已开始下载')}catch(err){toastErr('导出失败。',err)}b.disabled=false;b.textContent=t}
   });
   function openGroup(){
     const existing=people.filter(p=>!p.sample).map(p=>p.name);
@@ -781,7 +784,7 @@
     ctx.fillStyle='#1F232B';ctx.fillText(`他评 Others' rating${n?`（${n} 人${n>1?'平均':''}）`:''}`,x2+74,y);
   }
   function download(canvas,name){canvas.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000)},'image/png')}
-  async function exportPerson(p){
+  async function exportPerson(p,ret){
     const st=stats(p);const img=await wheelImage(p);
     const W=1600,H=1960;const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
@@ -795,9 +798,9 @@
     ctx.drawImage(img,100,270,1400,1400);
     legend(ctx,420,1720,st.n);
     ctx.fillStyle='#858A93';ctx.font=`300 20px Jost,${SANS}`;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText('© IAOL, International Association of Organization & Leadership. All rights reserved.',W/2,1900);
-    download(c,`${p.name}-侯氏韧性评估.png`);
+    if(ret)return c;download(c,`${p.name}-侯氏韧性评估.png`);
   }
-  async function exportAll(list){
+  async function exportAll(list,ret){
     const ps=list.filter(p=>!p.sample);if(!ps.length){notice('还没有人员');return}
     ps.unshift(groupPerson());
     const cols=ps.length<=4?ps.length:Math.ceil(ps.length/2),rows=Math.ceil(ps.length/cols);const cell=760,pad=60,head=210,foot=140;
@@ -812,7 +815,20 @@
       ctx.fillStyle='#4A4F58';ctx.font=`22px ${SANS}`;ctx.textAlign='right';ctx.fillText(`自评 ${fmt(st.selfAll)} · 他评 ${fmt(st.otherAll)}（${st.n} 份）`,x+cell-30,y+42)}
     legend(ctx,W/2-330,H-foot+40,0);
     ctx.fillStyle='#858A93';ctx.font=`300 18px Jost,${SANS}`;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText('© IAOL, International Association of Organization & Leadership. All rights reserved.',W/2,H-30);
-    download(c,`侯氏韧性评估-全员对照-${new Date().toISOString().slice(0,10)}.png`);
+    if(ret)return c;download(c,`侯氏韧性评估-全员对照-${new Date().toISOString().slice(0,10)}.png`);
+  }
+  const toBlob=c=>new Promise(r=>c.toBlob(r,'image/png'));
+  async function exportZip(list,progress){
+    const ps=list.filter(p=>!p.sample);if(!ps.length){notice('还没有人员');return}
+    const date=new Date().toISOString().slice(0,10);
+    const items=[{name:`00-全员对照合图-${date}.png`,make:()=>exportAll(list,true)},{name:`01-全员总览-${date}.png`,make:()=>exportPerson(groupPerson(),true)}];
+    ps.forEach((p,i)=>items.push({name:`${String(i+2).padStart(2,'0')}-${p.name}.png`,make:()=>exportPerson(p,true)}));
+    if(!window.JSZip){ // fallback: sequential downloads
+      for(let i=0;i<items.length;i++){progress&&progress(i+1,items.length);const c=await items[i].make();download(c,items[i].name);await new Promise(r=>setTimeout(r,600))}return}
+    const zip=new JSZip();
+    for(let i=0;i<items.length;i++){progress&&progress(i+1,items.length);const c=await items[i].make();zip.file(items[i].name,await toBlob(c))}
+    const blob=await zip.generateAsync({type:'blob'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`侯氏韧性评估-全部图片-${date}.zip`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);
   }
 
   /* ---------- events ---------- */
@@ -826,6 +842,7 @@
   $('btn-print').addEventListener('click',()=>window.print());
   $('btn-img').addEventListener('click',async()=>{if(!person)return;const b=$('btn-img');b.disabled=true;b.textContent='生成中…';try{await exportPerson(person);notice('图片已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出图片'});
   $('btn-wipe').addEventListener('click',()=>{askConfirm('清空本页所有人员与分数？Google 表格里的提交不会被删除，下次拉取仍会重新导入，需要的话请到表格里删掉对应行。',async()=>{try{if(store.wipe)await store.wipe();cloudSeen={};cloudStat={got:[],total:0,checked:0,err:''};cloudDiag=null;renderList();notice('本页数据已清空')}catch(e){toastErr('清空失败。',e)}})});
+  $('btn-zip').addEventListener('click',async()=>{const b=$('btn-zip');b.disabled=true;try{await exportZip(people,(i,n)=>{b.textContent=`生成中 ${i}/${n}…`});notice('压缩包已开始下载：全员合图 + 全员总览 + 每人一张')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全部图片（压缩包）'});
   $('btn-img-all').addEventListener('click',async()=>{const b=$('btn-img-all');b.disabled=true;b.textContent='生成中…';try{await exportAll(people);notice('合图已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全员合图'});
   if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片';$('newp-note').textContent='通常不需要手动新建，学员提交后会自动出现在这里。';}
   $('btn-group').addEventListener('click',openGroup);
