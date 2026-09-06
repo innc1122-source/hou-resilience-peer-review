@@ -34,7 +34,7 @@
   .tab.done .d{background:#7DAA3C}
   .tab.part .d{background:#F6C50F}
   .tab.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-  .target{display:flex;align-items:baseline;gap:10px;padding:6px 0 2px;border-bottom:2px solid var(--accent);margin-bottom:4px}
+  .target{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:6px 0 2px;border-bottom:2px solid var(--accent);margin-bottom:4px}
   .target b{font-size:20px;font-weight:500;letter-spacing:.06em;color:var(--accent)}
   .target span{color:var(--ink-3);font-size:12.5px}
   .scale{display:flex;gap:12px;justify-content:flex-end;font-size:11px;color:var(--ink-3);padding:6px 2px 0;flex-wrap:wrap}
@@ -106,7 +106,7 @@
 
   <section class="card" id="rate" hidden>
     <div class="tabs" id="tabs"></div>
-    <div class="target"><b id="t-name"></b><span id="t-hint"></span><button type="button" class="btn" id="t-switch" style="margin-left:auto;padding:4px 10px;font-size:12px;border-color:transparent;color:var(--ink-3)">换人</button></div>
+    <div class="target"><b id="t-name"></b><span id="t-hint"></span><button type="button" class="btn" id="t-switch" style="margin-left:auto;padding:4px 10px;font-size:12px;border-color:transparent;color:var(--ink-3);white-space:nowrap;flex:0 0 auto">换人</button></div>
     <div id="items"></div>
     <div class="nav"><button class="btn" id="prev">← 上一位</button><span class="msg" id="msg" style="color:#8A3B12;font-size:12.5px;align-self:center"></span><button class="btn primary" id="next">下一位 →</button></div>
   </section>
