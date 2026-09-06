@@ -608,7 +608,9 @@
   }
 
   /* ---------- group peer review: one public link, one code per rater ---------- */
-  const EXT_URL='https://innc1122-source.github.io/hou-resilience-peer-review/';
+  let LOCAL=false;
+  let EXT_URL='https://innc1122-source.github.io/hou-resilience-peer-review/';
+  const isApi=u=>u==='/api'||/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(u);
   const splitNames=s=>String(s||'').split(/[\n,，、;；]+/).map(x=>x.trim()).filter(Boolean);
   const sameName=(a,b)=>String(a||'').replace(/\s+/g,'').toLowerCase()===String(b||'').replace(/\s+/g,'').toLowerCase();
   const findPerson=n=>people.find(x=>!x.sample&&sameName(x.name,n));
@@ -684,8 +686,9 @@
   }
   let qrOpen=false,diagOpen=false;
   const scriptId=u=>{const m=String(u||'').match(/\/macros\/s\/([^\/]+)\/exec/);return m?m[1]:''};
-  const studentLink=(names,api)=>EXT_URL+'#n='+encodeURIComponent(names.join(','))+(scriptId(api)?'&s='+scriptId(api):'');
-  const resultsLink=(names,api)=>location.href.split('#')[0]+'#n='+encodeURIComponent(names.join(','))+'&s='+scriptId(api)+'&view=1';
+  const apiParam=api=>api==='/api'?'&api=%2Fapi':(scriptId(api)?'&s='+scriptId(api):'');
+  const studentLink=(names,api)=>EXT_URL+'#n='+encodeURIComponent(names.join(','))+apiParam(api);
+  const resultsLink=(names,api)=>location.href.split('#')[0]+'#n='+encodeURIComponent(names.join(','))+apiParam(api)+'&view=1';
   async function copyText(text,label){
     try{await navigator.clipboard.writeText(text);notice(label+'已复制');return true}catch(e){}
     try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,text.length);const ok=document.execCommand('copy');ta.remove();if(ok){notice(label+'已复制');return true}}catch(e){}
@@ -698,7 +701,7 @@
     const share=(api&&n>=2)?resultsLink(names,api):'';
     const t=cloudStat.checked?new Date(cloudStat.checked).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):'';
     el.innerHTML=`
-      <div class="step ${api?'done':''}"><div class="k"><b>1</b>GOOGLE 表格</div><div class="v ${api?'ok':'warn'}">${api?'已连接 ✓':'未设置'}</div><div class="acts"><button data-act="setup">${api?'修改':'设置'}</button></div></div>
+      <div class="step ${api?'done':''}"><div class="k"><b>1</b>${LOCAL?'本机服务':'GOOGLE 表格'}</div><div class="v ${api?'ok':'warn'}">${LOCAL?'运行中 ✓ 数据存在本机':(api?'已连接 ✓':'未设置')}</div><div class="acts">${LOCAL?'':`<button data-act="setup">${api?'修改':'设置'}</button>`}</div></div>
       <div class="step ${n>=2?'done':''}"><div class="k"><b>2</b>名单</div><div class="v ${n>=2?'ok':'warn'}">${n>=2?`${n} 人：${esc(names.join('、'))}`:'未填写'}</div><div class="acts"><button data-act="setup">${n>=2?'编辑':'填写'}</button></div></div>
       <div class="step ${link?'done':''}"><div class="k"><b>3</b>学员链接</div><div class="v">${link?'学员打开后选自己的名字开始打分':'先完成第 1、2 步'}</div><div class="acts"><button class="other" data-act="copy-link" ${link?'':'disabled'}>复制链接</button><button data-act="qr" ${link?'':'disabled'}>${qrOpen?'收起二维码':'二维码'}</button></div></div>
       <div class="step ${n>=2&&got>=n?'done':''}"><div class="k"><b>4</b>收到提交</div><div class="v ${cloudStat.err?'warn':(n&&got>=n?'ok':'')}">${cloudStat.err?'拉取失败：'+esc(cloudStat.err):(api?`${got}${n?' / '+n:''} 人${t?' · '+t+' 更新':''}${n&&got<n&&got>0?'<br><span style="font-weight:400;color:var(--ink-3)">缺：'+esc(names.filter(x=>!cloudStat.got.some(g=>sameName(g,x))).join('、'))+'</span>':''}`:'连接表格后自动统计')}${(cloudDiag&&!cloudDiag.err&&cloudDiag.matched===0&&cloudDiag.others.length)?`<br><span style="color:#8A3B12;font-weight:400">表格里有 ${cloudDiag.valid} 份提交，但名单与后台不一致</span>`:''}</div><div class="acts"><button data-act="pull" ${api?'':'disabled'}>立即拉取</button>${(cloudDiag&&cloudDiag.others.length)?'<button class="other" data-act="adopt">采用表格里的名单</button>':''}<button data-act="manual">手工导入</button><button class="ghost" data-act="diag">${diagOpen?'收起诊断':'诊断'}</button></div></div>
@@ -750,7 +753,7 @@
       if(e.target.id==='g-copy'){const list=namesNow();const m1=ov.querySelector('#g-msg1');if(list.length<2||list.length>9){m1.textContent='请填写 2–9 个姓名';return}
         lset('hou-group-names',list.join('\n'));const api=IN_CLAUDE?'':apiUrl();const url=IN_CLAUDE?EXT_URL+'#names='+encodeURIComponent(list.join(',')):studentLink(list,api);await copyText(url,'学员链接');m1.textContent='';return}
       if(e.target.id==='g-api-save'){const v=ov.querySelector('#g-api').value.trim();const m0=ov.querySelector('#g-msg0');
-        if(v&&!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(v)){m0.textContent='网址格式不对：应以 https://script.google.com/macros/s/ 开头、/exec 结尾';return}
+        if(v&&!isApi(v)){m0.textContent='网址格式不对：应以 https://script.google.com/macros/s/ 开头、/exec 结尾';return}
         lset('hou-api-url',v);$('btn-cloud').hidden=!v;if(!v){m0.textContent='已清除';return}
         m0.textContent='正在测试…';e.target.disabled=true;
         try{const r=await fetch(v,{cache:'no-store'});const j=await r.json();if(!j.ok)throw new Error(j.error||'返回错误');m0.textContent=`连接成功，表格里目前有 ${j.count||0} 份提交`}catch(err){m0.textContent='连接失败：'+(err&&err.message||'')+'。请确认部署时“访问权限”选了“任何人”。'}
@@ -841,7 +844,7 @@
   $('btn-other').addEventListener('click',()=>person&&openForm('other'));
   $('btn-print').addEventListener('click',()=>window.print());
   $('btn-img').addEventListener('click',async()=>{if(!person)return;const b=$('btn-img');b.disabled=true;b.textContent='生成中…';try{await exportPerson(person);notice('图片已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出图片'});
-  $('btn-wipe').addEventListener('click',()=>{askConfirm('清空本页所有人员与分数？Google 表格里的提交不会被删除，下次拉取仍会重新导入，需要的话请到表格里删掉对应行。',async()=>{try{if(store.wipe)await store.wipe();cloudSeen={};cloudStat={got:[],total:0,checked:0,err:''};cloudDiag=null;renderList();notice('本页数据已清空')}catch(e){toastErr('清空失败。',e)}})});
+  $('btn-wipe').addEventListener('click',()=>{askConfirm(LOCAL?'清空所有人员与分数？本机 data 文件夹里的提交记录也会一起删除，不可恢复。':'清空本页所有人员与分数？Google 表格里的提交不会被删除，下次拉取仍会重新导入，需要的话请到表格里删掉对应行。',async()=>{try{if(LOCAL){await fetch('/api/clear',{method:'POST'})}if(store.wipe)await store.wipe();cloudSeen={};cloudStat={got:[],total:0,checked:0,err:''};cloudDiag=null;renderList();notice('本页数据已清空')}catch(e){toastErr('清空失败。',e)}})});
   $('btn-zip').addEventListener('click',async()=>{const b=$('btn-zip');b.disabled=true;try{await exportZip(people,(i,n)=>{b.textContent=`生成中 ${i}/${n}…`});notice('压缩包已开始下载：全员合图 + 全员总览 + 每人一张')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全部图片（压缩包）'});
   $('btn-img-all').addEventListener('click',async()=>{const b=$('btn-img-all');b.disabled=true;b.textContent='生成中…';try{await exportAll(people);notice('合图已开始下载')}catch(e){toastErr('导出失败。',e)}b.disabled=false;b.textContent='导出全员合图'});
   if(!IN_CLAUDE){$('people-note').textContent='点开一位查看对照图并导出图片';$('newp-note').textContent='通常不需要手动新建，学员提交后会自动出现在这里。';}
@@ -856,7 +859,7 @@
   /* ---------- boot ---------- */
   // a results link (#api=…&names=…&view=1) turns this page into a live, read-only results board
   (function(){if(IN_CLAUDE)return;let q;try{q=new URLSearchParams((location.hash||'').replace(/^#/,''))}catch(e){return}
-    let a=(q.get('api')||'').trim();if(!a&&q.get('s'))a='https://script.google.com/macros/s/'+q.get('s').trim()+'/exec';if(/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(a))lset('hou-api-url',a);
+    let a=(q.get('api')||'').trim();if(!a&&q.get('s'))a='https://script.google.com/macros/s/'+q.get('s').trim()+'/exec';if(isApi(a))lset('hou-api-url',a);
     const n=q.get('names')||q.get('n');if(n)lset('hou-group-names',splitNames(n).join('\n'));
     VIEW_ONLY=q.get('view')==='1';
     if(VIEW_ONLY){document.body.classList.add('view-only');document.querySelector('.titles .zh small').textContent='结果直播';$('newp-note').textContent='结果每 20 秒自动更新。';}
@@ -873,7 +876,9 @@
   (async()=>{
     let db=null;
     try{if(window.claude&&typeof window.claude.use==='function')db=await window.claude.use('db')}catch(e){db=null}
+    if(!db&&/^https?:$/.test(location.protocol)){try{const c=new AbortController();setTimeout(()=>c.abort(),1500);const r=await fetch('/api?ping=1',{signal:c.signal,cache:'no-store'});const j=await r.json();if(j&&j.ok&&j.local){LOCAL=true;EXT_URL=location.origin+'/';lset('hou-api-url','/api')}}catch(e){}}
     start(db?DbStore(db):LocalStore());
+    if(LOCAL){const b=$('badge-store');b.hidden=false;b.className='badge dot';b.textContent='单机模式 · 学员提交直接存入这台电脑的 data 文件夹'}
   })();
 })();
 </script>
