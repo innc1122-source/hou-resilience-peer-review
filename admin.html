@@ -185,6 +185,12 @@
   .qrwrap .box{background:#fff;padding:6px;border:1px solid var(--line);border-radius:10px}
   .qrwrap p{margin:0;font-size:12.5px;color:var(--ink-2)}
   @media (max-width:1000px){.flow{grid-template-columns:repeat(2,1fr)}}
+  .info{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--other);background:#fff;color:var(--other);font-family:var(--latin);font-weight:500;font-size:12px;line-height:1;padding:0;margin-left:6px;vertical-align:-3px;cursor:pointer;flex:0 0 auto}
+  .info.on{background:var(--other);color:#fff}
+  .infobox{background:#EEF5F7;border-radius:10px;padding:10px 12px;margin:2px 0 8px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+  .infobox b{display:inline-block;color:var(--other);font-weight:500;margin-right:6px;letter-spacing:.06em;white-space:nowrap}
+  .infobox .bh{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+  .infobox .b span{display:inline-block;font-weight:500;color:var(--ink);min-width:7em;margin-right:6px}
   footer{display:flex;justify-content:space-between;align-items:center;color:var(--ink-2);font-family:var(--latin);font-weight:300;font-size:12.5px;padding:0 6px;flex-wrap:wrap;gap:6px}
   footer .zh{font-family:var(--sans);color:var(--ink-3);font-size:11.5px}
 
@@ -307,6 +313,31 @@
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   const $=id=>document.getElementById(id);
+  /* ---------- 定义与行为（来自《领导者意象与韧性地图》） ---------- */
+  const DIMINFO={a:'认识真实自我，并持续地完善自我。',b:'建立相互依存、相互促进的关系网络。',c:'采取有效行动不断克服困境，实现长期目标与价值。',d:'敏锐洞察环境变化并做好预防与准备。',e:'从容应对危机，并有效遏制危机的消极影响。',f:'引领和推动组织革新，塑造长期优势。'};
+  const INFO={
+    1:{def:'保持身心健康，展现自己最佳的状态。',beh:[['保持身体健康','拥有充沛的体力和饱满的精神。'],['控制情绪反应','及时察觉自己的情绪变化，并保持情绪稳定。'],['缓解压力状态','在压力情况下依然保持冷静和高效。']]},
+    2:{def:'对自我、人际及环境保持接纳、积极与乐观的信念。',beh:[['接纳完整自我','认可和拥抱自己的各个方面，包括优点和缺点。'],['展现积极态度','面对困难和挑战，积极寻求解决方案。'],['秉持乐观心态','关注事物好的一面，对未来充满信心。']]},
+    3:{def:'定义与更新自我存在的目的和价值。',beh:[['寻找人生热情','找到能够让自己全心投入、充满动力和激情去追求的事物。'],['挖掘自身优势','对自身所具备的独特能力、特质、潜力等有全面的认识。'],['发现自我价值','理解自己的行为、选择和贡献对他人、组织及社会的意义。']]},
+    4:{def:'与不同领域、不同背景的人建立高质量联结。',beh:[['识别重要他人','有意识地去辨别那些对自己具有重大影响、具有特殊意义的人。'],['推进有效沟通','以他人能够理解和接受的方式进行沟通，从而实现良好的互动。'],['促进双向信任','通过积累共同经历等方式增进彼此间的情感联结与信任。']]},
+    5:{def:'通过相互帮助和支持，实现互惠互利。',beh:[['给予他人帮助','在他人遇到困难或需要帮助的时候，主动提供援助或支持。'],['寻求外部支持','在面临挑战或实现目标的过程中，主动向他人寻求帮助。'],['推动持续合作','基于平等、尊重和诚信，与他人建立健康、富有成效的合作关系。']]},
+    6:{def:'利用和创造条件与他人共同发展和进步。',beh:[['加速共同成长','通过各种途径和方法实现双方共同发展与转变。'],['整合彼此资源','将各自独有的能力、技术、知识等资源深度融合。'],['驱动价值创造','积极运用彼此资源和能力为各方乃至整个系统创造新的价值。']]},
+    7:{def:'设定并追求合适的未来愿景与目标。',beh:[['描绘未来愿景','描述未来一段时间内自己想要实现的理想状态。'],['设定人生目标','明确自己在人生的不同方面期望达到的具体状态或成就。'],['强化自身意志','即便面临困难和挫折，依然能坚持自己的目标、价值观和行动方向。']]},
+    8:{def:'积极主动地面对困难、问题或新情况。',beh:[['勇于承担责任','不逃避、不推诿，敢于采取行动并为自己的行动结果负责。'],['做出明智选择','采取科学有效的方法和步骤做出最有利于实现预期目标的决策。'],['解决棘手问题','抓住问题本质，并思考、评估和尝试各种可能方案以解决根本问题。']]},
+    9:{def:'成功实现预期目标或取得期望的结果。',beh:[['适应内外变化','主动调整自身认知、情感和行为等以承受内外部变化带来的冲击。'],['超越原有绩效','迅速从变化带来的消极影响和损害中恢复并超越自己的预期表现。'],['重塑个人品牌','通过建立和扩大个人影响力来主动塑造环境，推动系统的进化。']]},
+    10:{def:'分析组织内外部环境并判断形势变化。',beh:[['审视社会环境','深入分析组织当前所处的政治、经济、社会、技术、法律环境。'],['预测新兴行业趋势','预测客户需求、产品、服务、供应链、竞争对手及利益相关者的未来变化。'],['做出极限生存假设','提前考虑可能的最坏情况以及对组织造成重大影响的不可控事件。']]},
+    11:{def:'持续进行风险监测并判断可能的风险情况和后果。',beh:[['理解风险','清晰认识危机的特征与类型，以有效审视组织可能面临的潜在危机。'],['评估影响','评估危机对组织正常运营及业务增长的影响。'],['制定风险管理计划','针对可能的危机状况制定应急响应计划。']]},
+    12:{def:'储备充足的能力与资源来确保组织稳定运行。',beh:[['打造高质量人才队伍','培养复合型人才，构建多元化人才队伍。'],['聚合内部资源','建立和凝聚组织冗余资源，形成组织合力。'],['保证业务连续性','为可能造成不良业务中断的情况进行规划和准备。']]},
+    13:{def:'根据情景需要灵活调整危机响应对策。',beh:[['克服心理压力','确认危机发生后，冷静面对危机并立即着手控制事态发展。'],['关注事态变化','监测事态发展，准确判断危机的性质、根源、影响以及相关变化。'],['果断决策','及时制定虽不完美但大体有效的危机应对计划和行动方案。']]},
+    14:{def:'协调资源与行动以高效执行危机响应决策。',beh:[['授权行动','迅速激活危机管理团队并授权相关人员灵活采取有效行动以遏制危机。'],['调配资源','获取资金、信息、人员等资源并按照危机处理任务的优先级加以分配。'],['保持沟通','在整个组织范围内就危机处理进展以及整体行动目标保持有效的沟通。']]},
+    15:{def:'与关键利益相关者保持互利共赢的关系。',beh:[['强化员工承诺','确保员工理解和认同组织愿景与价值观并能够积极参与组织目标的实现。'],['寻求客户支持','通过相关渠道接触客户并真诚地传达关切和负责任的态度。'],['恢复投资者信心','定期发布能够提振投资者信心的重大进展并释放危机解除的信号。']]},
+    16:{def:'对过往经历进行回顾并总结经验教训以促进组织的持续进化。',beh:[['促进学习导向','在组织中建立学习导向，使员工愿意学习、主动学习并善于学习。'],['构建学习网络','鼓励同侪学习、团队学习、向专家学习，并提供必要的资源和支持。'],['应用学习成果','帮助员工成功地将新知识或新技能应用到新的情境中。']]},
+    17:{def:'通过向更具适应性的新形态转变来实现组织的持续发展。',beh:[['调整组织结构','根据市场环境的变化调整组织结构，确保组织的运营效率和灵活性。'],['优化业务流程','及时识别业务流程中低效和不足之处，并加以修正和完善。'],['升级竞争优势','始终聚焦组织的核心竞争优势，并通过加速转型升级竞争优势。']]},
+    18:{def:'利用新的方法或技术，不断创造新的价值。',beh:[['建立变革机制','设计和实施一系列有助于组织成功实现变革的系统性流程和管理方式。'],['把握创新机遇','保持敏锐的洞察力和创造力，在变化的环境中不断挖掘新的商业机会。'],['追求生态共赢','通过集体智慧找到最优解决方案，促进所有利益相关者的利益最大化。']]}
+  };
+  const infoBtn=(key,label)=>`<button type="button" class="info" data-info="${key}" aria-label="查看${label}的定义与行为" title="定义与行为">!</button>`;
+  const infoBox=(key)=>{if(/^[a-f]$/.test(key))return `<div class="infobox" id="info-${key}" hidden><b>维度定义</b>${DIMINFO[key]}</div>`;const o=INFO[key];return `<div class="infobox" id="info-${key}" hidden><div><b>定义</b>${o.def}</div><div class="bh"><b>对应行为</b>${o.beh.map(b=>`<div class="b"><span>${b[0]}</span>${b[1]}</div>`).join('')}</div></div>`};
+  function toggleInfo(e){const b=e.target.closest('.info');if(!b)return;e.preventDefault();e.stopPropagation();const box=document.getElementById('info-'+b.dataset.info);if(!box)return;const open=box.hidden;box.hidden=!open;b.classList.toggle('on',open)}
   /* in-page dialogs: native confirm/alert/prompt are blocked inside the artifact frame */
   let noticeTimer=null;
   function notice(html,{err=false,sticky=false}={}){const n=$('notice');clearTimeout(noticeTimer);n.className='notice'+(err?' err':'');n.innerHTML=html;n.hidden=false;if(!sticky)noticeTimer=setTimeout(()=>{n.hidden=true},4500);return n}
@@ -532,11 +563,12 @@
     let h=`<div class="form ${isSelf?'':'other'}" role="dialog" aria-modal="true"><div class="top"><div><div class="t1">${isSelf?'自评':'他评'}<span>${esc(person.name)}${person.org?' · '+esc(person.org):''}</span></div><div class="t2">${isSelf?'请本人根据实际情况对 18 项逐项打分。':'请根据你的观察为这位同事打分；提交后计入他评平均值。'}</div></div><button class="ghost" id="f-close" aria-label="关闭">✕</button></div>`;
     if(!isSelf)h+=`<div class="fmeta"><label>评分人姓名（必填）<input id="f-rater" maxlength="30" placeholder="你的姓名"></label></div>`;
     h+=``;
-    DIMS.forEach(d=>{h+=`<div class="fdim"><div class="dh"><span class="chip" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${esc(d.en)}</span></div>`;
-      d.items.forEach(it=>{const i=it[0]-1;h+=`<div class="frow" data-row="${i}"><div class="lb"><span class="no">${it[0]}</span>${it[2]}<span class="en">${esc(it[1])}</span></div><div class="pills" role="radiogroup" aria-label="第${it[0]}项">${[1,2,3,4,5].map(v=>`<button type="button" class="pill ${vals[i]===v?'on':''}" data-i="${i}" data-v="${v}" role="radio" aria-checked="${vals[i]===v}">${v}</button>`).join('')}</div></div>`});h+='</div>'});
+    DIMS.forEach(d=>{h+=`<div class="fdim"><div class="dh"><span class="chip" style="background:${d.color}"></span>${d.k}. ${d.zh}<span class="en">${esc(d.en)}</span>${infoBtn(d.k,d.zh)}</div>${infoBox(d.k)}`;
+      d.items.forEach(it=>{const i=it[0]-1;h+=`<div class="frow" data-row="${i}"><div class="lb"><span class="no">${it[0]}</span>${it[2]}${infoBtn(it[0],it[2])}<span class="en">${esc(it[1])}</span></div><div class="pills" role="radiogroup" aria-label="第${it[0]}项">${[1,2,3,4,5].map(v=>`<button type="button" class="pill ${vals[i]===v?'on':''}" data-i="${i}" data-v="${v}" role="radio" aria-checked="${vals[i]===v}">${v}</button>`).join('')}</div></div>${infoBox(it[0])}`});h+='</div>'});
     h+=`<div class="factions"><span class="msg" id="f-msg"></span><button id="f-cancel">取消</button><button class="${isSelf?'primary':'other'}" id="f-save">${isSelf?'保存自评':'提交他评'}</button></div></div>`;
     const ov=$('overlay');ov.innerHTML=h;ov.hidden=false;
     ov.onclick=async e=>{
+      if(e.target.closest('.info')){toggleInfo(e);return}
       const pill=e.target.closest('.pill');
       if(pill){const i=+pill.dataset.i,v=+pill.dataset.v;vals[i]=v;ov.querySelectorAll(`.pill[data-i="${i}"]`).forEach(b=>{const on=+b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-checked',on)});pill.closest('.frow').classList.remove('miss');return}
       if(e.target.id==='f-close'||e.target.id==='f-cancel'||e.target===ov){ov.hidden=true;return}
