@@ -638,8 +638,7 @@
   let VIEW_ONLY=false;
   const groupId=list=>{let x=5381;const s=list.map(n=>n.trim().toLowerCase()).join('|');for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))>>>0;return x.toString(36)};
   const lget=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){};if(typeof renderFlow==='function'&&(k==='hou-api-url'||k==='hou-group-names'))setTimeout(renderFlow,0)};
-  const DEFAULT_NAMES=['Head','Tommy','Janice','Sammi','Yoga','Jayden','Ping'];
-  const apiUrl=()=>lget('hou-api-url'), groupNames=()=>{const n=splitNames(lget('hou-group-names'));return n.length?n:DEFAULT_NAMES.slice()};
+  const apiUrl=()=>lget('hou-api-url'), groupNames=()=>splitNames(lget('hou-group-names'));
   async function importCodes(codes,progress){
     const names=codes[0].names;const ids={},canon={};
     for(const n of names){let p=findPerson(n);ids[n]=p?p.id:await store.addPerson({name:n,org:'',self:null,createdAt:Date.now()});canon[n]=p?p.name:n}
